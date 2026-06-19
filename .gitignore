@@ -1,0 +1,27 @@
+# Tundlikud andmefailid — ära pane GitHubi
+*.pdf
+*.png
+
+# Genereeritud CSV väljundid
+tests/real_test/tulemus.csv
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtuaalkeskkond
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Keskkond
+.env

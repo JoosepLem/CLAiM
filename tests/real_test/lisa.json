@@ -1,0 +1,23 @@
+{
+  "arve_nr": "1745077",
+  "saatekirjad": [
+    {
+      "saatekiri_nr": "SK-2026-001245",
+      "patsient_id": "P001",
+      "teenused": [
+        {"teenus": "Hemogramm",  "kood": "66101", "kogus": 1, "uhiku_hind": 3.50, "summa": 3.50},
+        {"teenus": "CRP",        "kood": "66106", "kogus": 1, "uhiku_hind": 2.80, "summa": 2.80},
+        {"teenus": "Kreatiniin", "kood": "66107", "kogus": 1, "uhiku_hind": 2.20, "summa": 2.20}
+      ]
+    },
+    {
+      "saatekiri_nr": "SK-2026-001312",
+      "patsient_id": "P002",
+      "teenused": [
+        {"teenus": "TSH",              "kood": "66202", "kogus": 1, "uhiku_hind": 5.90, "summa": 5.90},
+        {"teenus": "Glükoos (seerum)", "kood": "66102", "kogus": 1, "uhiku_hind": 2.10, "summa": 2.10},
+        {"teenus": "Kolesterool",      "kood": "66103", "kogus": 1, "uhiku_hind": 2.50, "summa": 2.50}
+      ]
+    }
+  ]
+}

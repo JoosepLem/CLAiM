@@ -1,0 +1,12 @@
+{
+  "arve_nr": "SYN-2026-003",
+  "arve_kuupaev": "28.02.2026",
+  "partner": "SYNLAB Eesti OÜ",
+  "maksja": "Karulaugu Tervisekeskus OÜ",
+  "read": [
+    {"kaubakood": "66101", "kirjeldus": "Glükoos",           "kogus": 3,  "uhiku_hind": 2.21, "allahindlus_protsent": 20.0, "summa": 5.30},
+    {"kaubakood": "66102", "kirjeldus": "Kreatiniin",        "kogus": 2,  "uhiku_hind": 2.18, "allahindlus_protsent": 20.0, "summa": 3.49},
+    {"kaubakood": "66202", "kirjeldus": "Hemogramm (5-diff)","kogus": 4,  "uhiku_hind": 4.14, "allahindlus_protsent": 20.0, "summa": 13.25},
+    {"kaubakood": "66706", "kirjeldus": "TSH",               "kogus": 2,  "uhiku_hind": 8.17, "allahindlus_protsent": 20.0, "summa": 13.07}
+  ]
+}

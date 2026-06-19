@@ -1,0 +1,33 @@
+{
+  "arve_nr": "SYN-2026-002",
+  "saatekirjad": [
+    {
+      "saatekiri_nr": "SK-2026-002001",
+      "patsient_id": "P001",
+      "teenused": [
+        {"teenus": "Glükoos",            "kood": "66101", "kogus": 2, "uhiku_hind": 2.21, "summa": 4.42},
+        {"teenus": "Kreatiniin",         "kood": "66102", "kogus": 1, "uhiku_hind": 2.18, "summa": 2.18},
+        {"teenus": "Hemogramm (5-diff)", "kood": "66202", "kogus": 1, "uhiku_hind": 4.14, "summa": 4.14}
+      ]
+    },
+    {
+      "saatekiri_nr": "SK-2026-002002",
+      "patsient_id": "P002",
+      "teenused": [
+        {"teenus": "Glükoos",            "kood": "66101", "kogus": 2, "uhiku_hind": 2.21, "summa": 4.42},
+        {"teenus": "Hemogramm (5-diff)", "kood": "66202", "kogus": 2, "uhiku_hind": 4.14, "summa": 8.28},
+        {"teenus": "TSH",                "kood": "66706", "kogus": 1, "uhiku_hind": 8.17, "summa": 8.17}
+      ]
+    },
+    {
+      "saatekiri_nr": "SK-2026-002003",
+      "patsient_id": "P003",
+      "teenused": [
+        {"teenus": "Glükoos",            "kood": "66101", "kogus": 1, "uhiku_hind": 2.21, "summa": 2.21},
+        {"teenus": "Kreatiniin",         "kood": "66102", "kogus": 2, "uhiku_hind": 2.18, "summa": 4.36},
+        {"teenus": "Hemogramm (5-diff)", "kood": "66202", "kogus": 1, "uhiku_hind": 4.14, "summa": 4.14},
+        {"teenus": "TSH",                "kood": "66706", "kogus": 1, "uhiku_hind": 8.17, "summa": 8.17}
+      ]
+    }
+  ]
+}
