@@ -1,35 +1,74 @@
 from __future__ import annotations
-from .models import Arve, Lisa, Lahknevus
+from collections import defaultdict
+from .models import Appendix, TKData, Discrepancy
 
 
-def vorrle(arve: Arve, lisa: Lisa) -> list[Lahknevus]:
+def reconcile(appendix: Appendix, tk_data: TKData) -> list[Discrepancy]:
     """
-    Compares quantities per kood between the invoice (arve) and the referral list (lisa).
-    Returns discrepancies — rows where counts don't match.
+    Matches partner appendix services against TK records by (patient_id, service_code).
+
+    Aggregates quantities across all referrals — a patient can have the same billing code
+    in multiple referrals or multiple service rows within one referral (different test names
+    mapped to the same code). The comparison is always total appendix qty vs total TK qty.
+
+    Flags:
+    - Service in appendix not found in TK → missing from TK
+    - Service found in TK but total quantity differs → quantity mismatch
+    - TK has a (patient_id, service_code) not present in appendix → only in TK
     """
-    arve_kogused = arve.kogus_koodide_jargi()
-    lisa_kogused = lisa.kogus_koodide_jargi()
-    kirjeldused = arve.kirjeldus_koodide_jargi()
-    hinnad = arve.hind_koodide_jargi()
+    tk_qty = tk_data.qty_by_patient_and_code()
 
-    koodid = sorted(set(arve_kogused) | set(lisa_kogused))
-    lahknevused: list[Lahknevus] = []
+    # Aggregate appendix quantities by (patient_id, service_code)
+    appendix_qty: dict[tuple[str, str], int] = defaultdict(int)
+    # Keep first-seen metadata for reporting
+    appendix_meta: dict[tuple[str, str], tuple[str, str, float]] = {}  # → (referral_nr, description, unit_price)
 
-    for kood in koodid:
-        arve_k = arve_kogused.get(kood, 0.0)
-        lisa_k = float(lisa_kogused.get(kood, 0))
-        if arve_k == lisa_k:
+    for referral in appendix.referrals:
+        for service in referral.services:
+            key = (referral.patient_id, service.code)
+            appendix_qty[key] += service.quantity
+            if key not in appendix_meta:
+                appendix_meta[key] = (referral.referral_nr, service.service, service.unit_price)
+
+    discrepancies: list[Discrepancy] = []
+
+    for key, a_qty in appendix_qty.items():
+        patient_id, service_code = key
+        t_qty = tk_qty.get(key, 0)
+        if a_qty == t_qty:
             continue
-        erinevus = arve_k - lisa_k
-        hind = hinnad.get(kood, 0.0)
-        lahknevused.append(Lahknevus(
-            kood=kood,
-            kirjeldus=kirjeldused.get(kood, "—"),
-            arves_kogus=arve_k,
-            lisas_kogus=lisa_k,
-            erinevus=erinevus,
-            uhiku_hind=hind,
-            rahaline_erinevus_eur=round(erinevus * hind, 2),
+        referral_nr, description, unit_price = appendix_meta[key]
+        diff = a_qty - t_qty
+        discrepancies.append(Discrepancy(
+            patient_id=patient_id,
+            referral_nr=referral_nr,
+            service_code=service_code,
+            description=description,
+            appendix_qty=a_qty,
+            tk_qty=t_qty,
+            difference=diff,
+            unit_price=unit_price,
+            financial_diff_eur=round(diff * unit_price, 2),
         ))
 
-    return lahknevused
+    # Codes that appear anywhere in this appendix — defines the scope for this partner
+    appendix_codes = {service_code for _, service_code in appendix_qty}
+
+    # Flag TK entries with no matching appendix entry, scoped to this partner's code space.
+    # TK records with codes outside the appendix (e.g. hospital radiology codes when reconciling
+    # a lab partner) belong to a different partner's reconciliation run and are skipped here.
+    for (patient_id, service_code), qty in tk_qty.items():
+        if (patient_id, service_code) not in appendix_qty and service_code in appendix_codes:
+            discrepancies.append(Discrepancy(
+                patient_id=patient_id,
+                referral_nr="—",
+                service_code=service_code,
+                description="—",
+                appendix_qty=0,
+                tk_qty=qty,
+                difference=-qty,
+                unit_price=0.0,
+                financial_diff_eur=0.0,
+            ))
+
+    return discrepancies

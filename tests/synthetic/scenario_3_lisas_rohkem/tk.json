@@ -1,0 +1,16 @@
+{
+  "period_start": "2026-01-01",
+  "period_end": "2026-03-31",
+  "records": [
+    {"patient_id": "P001", "service_code": "66101", "date": "28.02.2026", "status": "sent", "quantity": 2, "amount": 4.42},
+    {"patient_id": "P001", "service_code": "66102", "date": "28.02.2026", "status": "sent", "quantity": 1, "amount": 2.18},
+    {"patient_id": "P001", "service_code": "66202", "date": "28.02.2026", "status": "sent", "quantity": 1, "amount": 4.14},
+    {"patient_id": "P002", "service_code": "66101", "date": "28.02.2026", "status": "sent", "quantity": 2, "amount": 4.42},
+    {"patient_id": "P002", "service_code": "66202", "date": "28.02.2026", "status": "sent", "quantity": 2, "amount": 8.28},
+    {"patient_id": "P002", "service_code": "66706", "date": "28.02.2026", "status": "sent", "quantity": 1, "amount": 8.17},
+    {"patient_id": "P003", "service_code": "66101", "date": "28.02.2026", "status": "open", "quantity": 3, "amount": 6.63},
+    {"patient_id": "P003", "service_code": "66102", "date": "28.02.2026", "status": "open", "quantity": 3, "amount": 6.54},
+    {"patient_id": "P003", "service_code": "66202", "date": "28.02.2026", "status": "open", "quantity": 1, "amount": 4.14},
+    {"patient_id": "P003", "service_code": "66706", "date": "28.02.2026", "status": "open", "quantity": 1, "amount": 8.17}
+  ]
+}

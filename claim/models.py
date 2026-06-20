@@ -2,84 +2,107 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
-class ArveRida(BaseModel):
-    kaubakood: str
-    kirjeldus: str
-    kogus: float
-    uhiku_hind: float
-    allahindlus_protsent: float
-    summa: float
+class InvoiceRow(BaseModel):
+    service_code: str
+    description: str
+    quantity: float
+    unit_price: float
+    discount_pct: float
+    amount: float
 
 
-class Arve(BaseModel):
-    arve_nr: str
-    arve_kuupaev: str
+class Invoice(BaseModel):
+    invoice_nr: str
+    invoice_date: str
     partner: str
-    maksja: str
-    read: list[ArveRida]
+    payer: str
+    rows: list[InvoiceRow]
 
-    def kogus_koodide_jargi(self) -> dict[str, float]:
+    def qty_by_code(self) -> dict[str, float]:
         result: dict[str, float] = {}
-        for r in self.read:
-            result[r.kaubakood] = result.get(r.kaubakood, 0.0) + r.kogus
+        for r in self.rows:
+            result[r.service_code] = result.get(r.service_code, 0.0) + r.quantity
         return result
 
-    def kirjeldus_koodide_jargi(self) -> dict[str, str]:
-        # first occurrence wins
+    def description_by_code(self) -> dict[str, str]:
         result: dict[str, str] = {}
-        for r in self.read:
-            if r.kaubakood not in result:
-                result[r.kaubakood] = r.kirjeldus
+        for r in self.rows:
+            if r.service_code not in result:
+                result[r.service_code] = r.description
         return result
 
-    def hind_koodide_jargi(self) -> dict[str, float]:
+    def price_by_code(self) -> dict[str, float]:
         result: dict[str, float] = {}
-        for r in self.read:
-            if r.kaubakood not in result:
-                result[r.kaubakood] = r.uhiku_hind
+        for r in self.rows:
+            if r.service_code not in result:
+                result[r.service_code] = r.unit_price
         return result
 
 
-class TeenusRida(BaseModel):
-    teenus: str
-    kood: str
-    kogus: int
-    uhiku_hind: float
-    summa: float
+class ServiceRow(BaseModel):
+    service: str
+    code: str
+    quantity: int
+    unit_price: float
+    amount: float
 
 
-class Saatekiri(BaseModel):
-    saatekiri_nr: str
-    patsient_id: str
-    teenused: list[TeenusRida]
+class Referral(BaseModel):
+    referral_nr: str
+    patient_id: str
+    services: list[ServiceRow]
 
 
-class Lisa(BaseModel):
-    arve_nr: str
-    saatekirjad: list[Saatekiri]
+class Appendix(BaseModel):
+    invoice_nr: str
+    referrals: list[Referral]
 
-    def kogus_koodide_jargi(self) -> dict[str, int]:
+    def qty_by_code(self) -> dict[str, int]:
         result: dict[str, int] = {}
-        for sk in self.saatekirjad:
-            for t in sk.teenused:
-                result[t.kood] = result.get(t.kood, 0) + t.kogus
+        for ref in self.referrals:
+            for s in ref.services:
+                result[s.code] = result.get(s.code, 0) + s.quantity
         return result
 
-    def kirjeldus_koodide_jargi(self) -> dict[str, str]:
+    def description_by_code(self) -> dict[str, str]:
         result: dict[str, str] = {}
-        for sk in self.saatekirjad:
-            for t in sk.teenused:
-                if t.kood not in result:
-                    result[t.kood] = t.teenus
+        for ref in self.referrals:
+            for s in ref.services:
+                if s.code not in result:
+                    result[s.code] = s.service
         return result
 
 
-class Lahknevus(BaseModel):
-    kood: str
-    kirjeldus: str
-    arves_kogus: float
-    lisas_kogus: float
-    # positive = arves rohkem (ülearve), negative = lisas rohkem (alarve)
-    erinevus: float
-    uhiku_hind: float
-    rahaline_erinevus_eur: float
+class TKRecord(BaseModel):
+    patient_id: str
+    service_code: str
+    date: str
+    status: str  # "open" or "sent" — both count as valid matches
+    quantity: int
+    amount: float
+
+
+class TKData(BaseModel):
+    period_start: str
+    period_end: str
+    records: list[TKRecord]
+
+    def qty_by_patient_and_code(self) -> dict[tuple[str, str], int]:
+        result: dict[tuple[str, str], int] = {}
+        for r in self.records:
+            key = (r.patient_id, r.service_code)
+            result[key] = result.get(key, 0) + r.quantity
+        return result
+
+
+class Discrepancy(BaseModel):
+    patient_id: str
+    referral_nr: str
+    service_code: str
+    description: str
+    appendix_qty: int    # what partner's appendix says
+    tk_qty: int          # what TK has (0 if missing)
+    # positive = appendix has more than TK, negative = TK has more than appendix
+    difference: int
+    unit_price: float
+    financial_diff_eur: float

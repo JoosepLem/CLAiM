@@ -1,12 +1,12 @@
 {
-  "arve_nr": "SYN-2026-001",
-  "arve_kuupaev": "28.02.2026",
+  "invoice_nr": "SYN-2026-001",
+  "invoice_date": "28.02.2026",
   "partner": "SYNLAB Eesti OÜ",
-  "maksja": "Karulaugu Tervisekeskus OÜ",
-  "read": [
-    {"kaubakood": "66101", "kirjeldus": "Glükoos",           "kogus": 5,  "uhiku_hind": 2.21, "allahindlus_protsent": 20.0, "summa": 8.84},
-    {"kaubakood": "66102", "kirjeldus": "Kreatiniin",        "kogus": 3,  "uhiku_hind": 2.18, "allahindlus_protsent": 20.0, "summa": 5.23},
-    {"kaubakood": "66202", "kirjeldus": "Hemogramm (5-diff)","kogus": 4,  "uhiku_hind": 4.14, "allahindlus_protsent": 20.0, "summa": 13.25},
-    {"kaubakood": "66706", "kirjeldus": "TSH",               "kogus": 2,  "uhiku_hind": 8.17, "allahindlus_protsent": 20.0, "summa": 13.07}
+  "payer": "Karulaugu Tervisekeskus OÜ",
+  "rows": [
+    {"service_code": "66101", "description": "Glükoos",            "quantity": 5, "unit_price": 2.21, "discount_pct": 20.0, "amount": 8.84},
+    {"service_code": "66102", "description": "Kreatiniin",         "quantity": 3, "unit_price": 2.18, "discount_pct": 20.0, "amount": 5.23},
+    {"service_code": "66202", "description": "Hemogramm (5-diff)", "quantity": 4, "unit_price": 4.14, "discount_pct": 20.0, "amount": 13.25},
+    {"service_code": "66706", "description": "TSH",                "quantity": 2, "unit_price": 8.17, "discount_pct": 20.0, "amount": 13.07}
   ]
 }

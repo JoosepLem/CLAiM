@@ -1,68 +1,71 @@
-"""Unit tests for matching logic against all three synthetic scenarios."""
+"""Unit tests for patient-level reconciliation logic."""
 from pathlib import Path
-import pytest
 
-from claim.parsers.arve_json import parse_arve_json
-from claim.parsers.lisa_json import parse_lisa_json
-from claim.matching import vorrle
+from claim.parsers.lisa_json import parse_appendix_json
+from claim.parsers.tk_json import parse_tk_json
+from claim.matching import reconcile
 
 SYNTHETIC = Path(__file__).parent / "synthetic"
 
 
 def load(scenario: str):
     base = SYNTHETIC / scenario
-    return parse_arve_json(base / "arve.json"), parse_lisa_json(base / "lisa.json")
+    appendix = parse_appendix_json(base / "lisa.json")
+    tk = parse_tk_json(base / "tk.json")
+    return appendix, tk
 
 
-class TestScenario1TaielikVaste:
+class TestScenario1FullMatch:
     def test_no_discrepancies(self):
-        arve, lisa = load("scenario_1_taielik_vaste")
-        lahknevused = vorrle(arve, lisa)
-        assert lahknevused == [], f"Oodati 0 lahknevust, sain: {lahknevused}"
-
-    def test_code_totals_match(self):
-        arve, lisa = load("scenario_1_taielik_vaste")
-        assert arve.kogus_koodide_jargi() == {"66101": 5, "66102": 3, "66202": 4, "66706": 2}
-        assert lisa.kogus_koodide_jargi() == {"66101": 5, "66102": 3, "66202": 4, "66706": 2}
+        appendix, tk = load("scenario_1_taielik_vaste")
+        assert reconcile(appendix, tk) == []
 
 
-class TestScenario2ArvesRohkem:
-    def test_three_discrepancies(self):
-        arve, lisa = load("scenario_2_arves_rohkem")
-        lahknevused = vorrle(arve, lisa)
-        assert len(lahknevused) == 3
+class TestScenario2AppendixHasMore:
+    def test_discrepancies_exist(self):
+        appendix, tk = load("scenario_2_arves_rohkem")
+        discs = reconcile(appendix, tk)
+        assert len(discs) > 0
 
-    def test_all_positive(self):
-        arve, lisa = load("scenario_2_arves_rohkem")
-        for l in vorrle(arve, lisa):
-            assert l.erinevus > 0, f"Kood {l.kood}: oodati arves rohkem"
+    def test_missing_entries_flagged(self):
+        appendix, tk = load("scenario_2_arves_rohkem")
+        discs = reconcile(appendix, tk)
+        # P002/66101 is in appendix but not in TK
+        match = next((d for d in discs if d.patient_id == "P002" and d.service_code == "66101"), None)
+        assert match is not None
+        assert match.tk_qty == 0
+        assert match.difference == 2
 
-    def test_specific_discrepancies(self):
-        arve, lisa = load("scenario_2_arves_rohkem")
-        by_kood = {l.kood: l for l in vorrle(arve, lisa)}
-        assert by_kood["66101"].erinevus == 2   # 7 arves, 5 lisas
-        assert by_kood["66706"].erinevus == 2   # 4 arves, 2 lisas
-        assert by_kood["66112"].erinevus == 2   # 2 arves, 0 lisas
+    def test_qty_mismatch_flagged(self):
+        appendix, tk = load("scenario_2_arves_rohkem")
+        discs = reconcile(appendix, tk)
+        # P003/66102: appendix=2, TK=1
+        match = next((d for d in discs if d.patient_id == "P003" and d.service_code == "66102"), None)
+        assert match is not None
+        assert match.appendix_qty == 2
+        assert match.tk_qty == 1
+        assert match.difference == 1
 
-    def test_financial_impact(self):
-        arve, lisa = load("scenario_2_arves_rohkem")
-        total = sum(l.rahaline_erinevus_eur for l in vorrle(arve, lisa))
+    def test_financial_impact_positive(self):
+        appendix, tk = load("scenario_2_arves_rohkem")
+        total = sum(d.financial_diff_eur for d in reconcile(appendix, tk))
         assert total > 0
 
 
-class TestScenario3LisasRohkem:
-    def test_two_discrepancies(self):
-        arve, lisa = load("scenario_3_lisas_rohkem")
-        lahknevused = vorrle(arve, lisa)
-        assert len(lahknevused) == 2
+class TestScenario3TKHasMore:
+    def test_discrepancies_exist(self):
+        appendix, tk = load("scenario_3_lisas_rohkem")
+        assert len(reconcile(appendix, tk)) > 0
 
-    def test_all_negative(self):
-        arve, lisa = load("scenario_3_lisas_rohkem")
-        for l in vorrle(arve, lisa):
-            assert l.erinevus < 0, f"Kood {l.kood}: oodati lisas rohkem"
+    def test_tk_excess_flagged(self):
+        appendix, tk = load("scenario_3_lisas_rohkem")
+        discs = reconcile(appendix, tk)
+        # P003/66101: appendix=1, TK=3
+        match = next((d for d in discs if d.patient_id == "P003" and d.service_code == "66101"), None)
+        assert match is not None
+        assert match.difference == -2
 
-    def test_specific_discrepancies(self):
-        arve, lisa = load("scenario_3_lisas_rohkem")
-        by_kood = {l.kood: l for l in vorrle(arve, lisa)}
-        assert by_kood["66101"].erinevus == -2  # 3 arves, 5 lisas
-        assert by_kood["66102"].erinevus == -1  # 2 arves, 3 lisas
+    def test_financial_impact_negative(self):
+        appendix, tk = load("scenario_3_lisas_rohkem")
+        appendix_driven = [d for d in reconcile(appendix, tk) if d.referral_nr != "—"]
+        assert all(d.difference < 0 for d in appendix_driven)
