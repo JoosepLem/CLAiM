@@ -1,7 +1,7 @@
 // Per-invoice reconciliation sample data (Synlab, SYN-05-2026).
 // In production this is fetched per invoice id; here it is a static sample.
 
-export type DiscType = 'missing' | 'qty';
+export type DiscType = 'missing' | 'qty' | 'tk_only';
 
 export interface Discrepancy {
   id: string;
@@ -70,13 +70,15 @@ export const MATCHED: MatchedLine[] = [
   { id: 'M8', dos: '24 May', patient: 'P-10710', code: 'URC-005', name: 'Urinalysis, Complete',           price: 12.5,  pq: 1, line: 455 },
 ];
 
-/** Money at risk for a single discrepancy. */
+/** Money at risk for a single discrepancy (0 for tk_only entries). */
 export function riskOf(d: Discrepancy): number {
+  if (d.type === 'tk_only') return 0;
   return d.type === 'missing' ? d.price * d.pq : d.price * (d.pq - d.ptq);
 }
 
 export function noteOf(d: Discrepancy): string {
   if (d.type === 'missing') return 'Billed by the partner but never invoiced to the insurer.';
+  if (d.type === 'tk_only') return 'TK has a record of this service but the partner did not include it in their invoice.';
   return `Partner billed ${d.pq}, patient invoice billed ${d.ptq}.`;
 }
 

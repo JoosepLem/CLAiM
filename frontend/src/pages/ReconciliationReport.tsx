@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Download } from 'lucide-react';
@@ -6,14 +6,15 @@ import Wordmark from '../components/Wordmark';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import {
   DISCREPANCIES, MATCHED, REPORT_META,
-  riskOf, recentInvoices, type Discrepancy,
+  riskOf, recentInvoices, type Discrepancy, type MatchedLine,
 } from '../data/report';
 import { INVOICES } from '../data/invoices';
 import { money, num } from '../lib/format';
 
 const TYPE_CONFIG: Record<Discrepancy['type'], { color: string; bg: string }> = {
   missing: { color: '#B0492F', bg: '#F4E7E0' },
-  qty: { color: '#8A6A1E', bg: '#F3EBD7' },
+  qty:     { color: '#8A6A1E', bg: '#F3EBD7' },
+  tk_only: { color: '#5A6A7A', bg: '#EAF0F5' },
 };
 
 const microLabel = 'font-mono text-[10.5px] tracking-[0.07em] uppercase';
@@ -21,27 +22,50 @@ const microLabel = 'font-mono text-[10.5px] tracking-[0.07em] uppercase';
 interface AllRow {
   id: string; dos: string; patient: string; code: string; name: string;
   qty: number; unit: string; total: string;
-  statusType: 'missing' | 'qty' | 'matched'; flagged: boolean; barColor: string; line: number;
+  statusType: 'missing' | 'qty' | 'tk_only' | 'matched'; flagged: boolean; barColor: string; line: number;
 }
 
 function statusBg(statusType: string) {
   if (statusType === 'missing') return '#F4E7E0';
   if (statusType === 'qty') return '#F3EBD7';
+  if (statusType === 'tk_only') return '#EAF0F5';
   return '#E6EFE8';
 }
 function statusColor(statusType: string) {
   if (statusType === 'missing') return '#B0492F';
   if (statusType === 'qty') return '#8A6A1E';
+  if (statusType === 'tk_only') return '#5A6A7A';
   return '#3C7355';
+}
+
+interface ApiReport {
+  discrepancies: Discrepancy[];
+  matched: MatchedLine[];
+  meta: typeof REPORT_META;
 }
 
 export default function ReconciliationReport() {
   const { t } = useTranslation();
   const { invoiceId } = useParams();
   const meta = INVOICES.find((i) => i.id === invoiceId);
-  const partner = meta?.partner ?? REPORT_META.partner;
-  const invoiceNo = meta?.invoiceNo ?? REPORT_META.invoiceNo;
-  const uploaded = meta?.uploaded ?? REPORT_META.uploaded;
+
+  const [apiReport, setApiReport] = useState<ApiReport | null>(null);
+
+  useEffect(() => {
+    if (!invoiceId) return;
+    fetch(`/api/invoices/${invoiceId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data) setApiReport(data); })
+      .catch(() => {});
+  }, [invoiceId]);
+
+  const discs: Discrepancy[] = apiReport?.discrepancies ?? DISCREPANCIES;
+  const matched: MatchedLine[] = apiReport?.matched ?? MATCHED;
+  const reportMeta = apiReport?.meta ?? REPORT_META;
+
+  const partner = apiReport?.meta.partner ?? meta?.partner ?? REPORT_META.partner;
+  const invoiceNo = apiReport?.meta.invoiceNo ?? meta?.invoiceNo ?? REPORT_META.invoiceNo;
+  const uploaded = apiReport?.meta.uploaded ?? meta?.uploaded ?? REPORT_META.uploaded;
 
   const [resolved, setResolved] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>('D1');
@@ -55,29 +79,31 @@ export default function ReconciliationReport() {
     });
 
   const kpi = useMemo(() => {
-    const open = DISCREPANCIES.filter((d) => !resolved.has(d.id));
-    const moneyAtRisk = open.reduce((s, d) => s + riskOf(d), 0);
-    const remaining = open.length;
-    const total = DISCREPANCIES.length;
+    const financial = discs.filter((d) => d.type !== 'tk_only');
+    const openFinancial = financial.filter((d) => !resolved.has(d.id));
+    const moneyAtRisk = openFinancial.reduce((s, d) => s + riskOf(d), 0);
+    const remaining = openFinancial.length;
+    const total = financial.length;
     const resolvedCount = total - remaining;
-    const reconLines = REPORT_META.baselineReconciled + resolvedCount;
-    const reconPct = Math.round((reconLines / REPORT_META.totalLines) * 100);
-    return { moneyAtRisk, remaining, total, resolvedCount, reconLines, reconPct };
-  }, [resolved]);
+    const tkOnly = discs.filter((d) => d.type === 'tk_only').length;
+    const reconLines = reportMeta.baselineReconciled + resolvedCount;
+    const reconPct = Math.round((reconLines / reportMeta.totalLines) * 100);
+    return { moneyAtRisk, remaining, total, resolvedCount, tkOnly, reconLines, reconPct };
+  }, [resolved, discs, reportMeta]);
 
   const orderedRows = useMemo<AllRow[]>(() => {
-    const disc = DISCREPANCIES.map((d) => ({
+    const discRows = discs.map((d) => ({
       id: d.id, dos: d.dos, patient: d.patient, code: d.code, name: d.name,
       qty: d.pq, unit: money(d.price), total: money(d.price * d.pq),
       statusType: d.type, flagged: true, barColor: TYPE_CONFIG[d.type].color, line: d.line,
     }));
-    const matched = MATCHED.map((m) => ({
+    const matchedRows = matched.map((m) => ({
       id: m.id, dos: m.dos, patient: m.patient, code: m.code, name: m.name,
       qty: m.pq, unit: money(m.price), total: money(m.price * m.pq),
       statusType: 'matched' as const, flagged: false, barColor: 'transparent', line: m.line,
     }));
-    return [...disc, ...matched].sort((a, b) => a.line - b.line);
-  }, []);
+    return [...discRows, ...matchedRows].sort((a, b) => a.line - b.line);
+  }, [discs, matched]);
 
   const tabCls = (active: boolean) =>
     'inline-flex items-center gap-2 px-3.5 py-3 text-[14px] cursor-pointer border-b-2 ' +
@@ -121,9 +147,9 @@ export default function ReconciliationReport() {
               <div className="flex gap-[34px] mt-5">
                 {[
                   [t('report.invoiceNo'), invoiceNo],
-                  [t('report.period'), REPORT_META.period],
+                  [t('report.period'), reportMeta.period],
                   [t('report.uploaded'), uploaded],
-                  [t('report.lines'), String(REPORT_META.totalLines)],
+                  [t('report.lines'), String(reportMeta.totalLines)],
                 ].map(([k, v]) => (
                   <div key={k}>
                     <div className={`${microLabel} text-[#9A9484]`}>{k}</div>
@@ -151,12 +177,13 @@ export default function ReconciliationReport() {
               <div className="font-mono text-[30px] font-semibold mt-1.5 tracking-[-0.01em]">{kpi.remaining}</div>
               <div className="text-[12.5px] text-muted mt-0.5">
                 {t('report.ofFlaggedWithResolved', { total: kpi.total, resolved: kpi.resolvedCount })}
+                {kpi.tkOnly > 0 && <span className="text-[#5A6A7A]"> · {kpi.tkOnly} TK only</span>}
               </div>
             </div>
             <div className="bg-white border border-line rounded-xl px-[18px] py-[15px]">
               <div className={`${microLabel} text-[#9A9484]`}>{t('report.linesReconciled')}</div>
               <div className="font-mono text-[30px] font-semibold mt-1.5 tracking-[-0.01em]">
-                {num(kpi.reconLines)}<span className="text-[#B5AF9E] text-[16px] font-medium"> / {num(REPORT_META.totalLines)}</span>
+                {num(kpi.reconLines)}<span className="text-[#B5AF9E] text-[16px] font-medium"> / {num(reportMeta.totalLines)}</span>
               </div>
               <div className="h-1.5 bg-[#EFEADB] rounded-full mt-2.5 overflow-hidden">
                 <div className="h-full bg-gold rounded-full transition-[width] duration-300" style={{ width: `${kpi.reconPct}%` }} />
@@ -169,17 +196,20 @@ export default function ReconciliationReport() {
             <button className={tabCls(tab === 'disc')} onClick={() => setTab('disc')}>
               {t('report.tabDiscrepancies')}
               <span className="font-mono text-[11px] bg-[#F4E7E0] text-danger px-[7px] py-0.5 rounded-full font-semibold">{kpi.remaining}</span>
+              {kpi.tkOnly > 0 && (
+                <span className="font-mono text-[11px] bg-[#EAF0F5] text-[#5A6A7A] px-[7px] py-0.5 rounded-full font-semibold">{kpi.tkOnly} TK</span>
+              )}
             </button>
             <button className={tabCls(tab === 'all')} onClick={() => setTab('all')}>
               {t('report.tabAllLines')}
-              <span className="font-mono text-[11px] text-[#9A9484]">{REPORT_META.totalLines}</span>
+              <span className="font-mono text-[11px] text-[#9A9484]">{reportMeta.totalLines}</span>
             </button>
           </div>
 
           {/* Discrepancy list */}
           {tab === 'disc' && (
             <div className="px-[18px] pt-3.5 pb-5 flex flex-col gap-2.5 bg-[#F6F3EA]">
-              {DISCREPANCIES.map((d) => (
+              {discs.map((d) => (
                 <DiscCard
                   key={d.id}
                   d={d}
@@ -198,7 +228,7 @@ export default function ReconciliationReport() {
           {tab === 'all' && (
             <div className="px-[18px] pt-3.5 pb-5 bg-[#F6F3EA]">
               <div className="text-[12.5px] text-muted px-1 pb-3">
-                {t('report.showingLines', { shown: orderedRows.length, total: REPORT_META.totalLines })}
+                {t('report.showingLines', { shown: orderedRows.length, total: reportMeta.totalLines })}
               </div>
               <div className="border border-line rounded-[10px] overflow-hidden bg-white">
                 <div className="grid grid-cols-[118px_64px_84px_86px_1fr_44px_84px_92px] gap-2 px-3.5 py-2.5 bg-[#F3EFE4] border-b border-[#E6DFCF] font-mono text-[10px] tracking-[0.06em] uppercase text-[#9A9484]">
@@ -247,11 +277,13 @@ function DiscCard({
   partner: string;
 }) {
   const meta = TYPE_CONFIG[d.type];
-  const typeLabel = d.type === 'missing' ? t('report.missing') : t('report.qtyMismatch');
-  const present = d.type !== 'missing';
+  const typeLabel = d.type === 'missing' ? t('report.missing')
+    : d.type === 'tk_only' ? 'TK only'
+    : t('report.qtyMismatch');
+  const present = d.type === 'qty';
   const risk = riskOf(d);
-  const pdfRef = `p.${d.page} · line ${d.line}`;
-  const visits = recentInvoices(d.dos);
+  const pdfRef = d.page > 0 ? `p.${d.page} · line ${d.line}` : `line ${d.line + 1}`;
+  const visits = d.dos && d.dos !== '—' ? recentInvoices(d.dos) : null;
 
   return (
     <div
@@ -308,17 +340,19 @@ function DiscCard({
                 <div className="font-mono text-[9.5px] tracking-[0.06em] uppercase text-[#A88F5A]">{t('report.patientId')}</div>
                 <div className="font-mono text-[15px] font-semibold mt-0.5">{d.patient}</div>
               </div>
-              <div>
-                <div className="font-mono text-[9.5px] tracking-[0.06em] uppercase text-[#A88F5A]">{t('report.recentPatientInvoices')}</div>
-                <div className="flex gap-1.5 mt-1.5">
-                  {visits.map((v, i) => (
-                    <span key={v} className="font-mono text-[12px] px-[9px] py-[3px] rounded-md"
-                      style={i === 0 ? { background: '#F0E2C0', color: '#8A6A1E', fontWeight: 600 } : { background: '#fff', color: '#6E6A5E', border: '1px solid #E6DFCF' }}>
-                      {v}
-                    </span>
-                  ))}
+              {visits && (
+                <div>
+                  <div className="font-mono text-[9.5px] tracking-[0.06em] uppercase text-[#A88F5A]">{t('report.recentPatientInvoices')}</div>
+                  <div className="flex gap-1.5 mt-1.5">
+                    {visits.map((v, i) => (
+                      <span key={v} className="font-mono text-[12px] px-[9px] py-[3px] rounded-md"
+                        style={i === 0 ? { background: '#F0E2C0', color: '#8A6A1E', fontWeight: 600 } : { background: '#fff', color: '#6E6A5E', border: '1px solid #E6DFCF' }}>
+                        {v}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 

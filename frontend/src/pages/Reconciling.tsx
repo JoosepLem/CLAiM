@@ -11,7 +11,9 @@ export default function Reconciling() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const fileName = (location.state as { fileName?: string })?.fileName ?? 'partner_invoice.pdf';
+  const state = (location.state as { fileName?: string; invoiceId?: string }) ?? {};
+  const fileName = state.fileName ?? 'partner_invoice.pdf';
+  const invoiceId = state.invoiceId ?? 'i1';
 
   const STEPS = [
     { label: t('reconciling.step1Label'), description: t('reconciling.step1Desc') },
@@ -42,7 +44,7 @@ export default function Reconciling() {
           setDone(true);
           setOverallPct(100);
           timeout = setTimeout(() => {
-            if (!cancelled) navigate('/invoices/i1');
+            if (!cancelled) navigate(`/invoices/${invoiceId}`);
           }, 900);
         }
       }, durations[i] ?? 1200);

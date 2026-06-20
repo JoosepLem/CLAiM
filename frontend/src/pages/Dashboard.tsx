@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Upload, ChevronDown, ArrowRight, Check, X, Info, Trash2 } from 'lucide-react';
@@ -34,9 +34,16 @@ const periodLabelOf = (period: string) => {
 };
 
 const STORAGE_KEY = 'claim_invoices';
+const STORAGE_VERSION = 'v2';
+const VERSION_KEY = 'claim_invoices_ver';
 
 function loadInvoices(): InvoiceSummary[] {
   try {
+    if (localStorage.getItem(VERSION_KEY) !== STORAGE_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(VERSION_KEY, STORAGE_VERSION);
+      return [...INVOICES];
+    }
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [...INVOICES];
     return JSON.parse(raw) as InvoiceSummary[];
@@ -47,6 +54,7 @@ function loadInvoices(): InvoiceSummary[] {
 
 function saveInvoices(list: InvoiceSummary[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  localStorage.setItem(VERSION_KEY, STORAGE_VERSION);
 }
 
 export default function Dashboard() {
@@ -59,8 +67,11 @@ export default function Dashboard() {
   const [draftTo, setDraftTo] = useState(DEFAULT_RANGE.to);
   const [openMenu, setOpenMenu] = useState<'partner' | 'period' | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedArve, setUploadedArve] = useState<File | null>(null);
+  const [uploadedLisa, setUploadedLisa] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lisaInputRef = useRef<HTMLInputElement>(null);
   const [invoices, setInvoices] = useState<InvoiceSummary[]>(loadInvoices);
 
   const filtered = useMemo(() => {
@@ -115,24 +126,28 @@ export default function Dashboard() {
     });
   };
 
-  const addInvoiceAndReconcile = () => {
-    const partner = PARTNERS[Math.floor(Math.random() * PARTNERS.length)];
-    const newInvoice: InvoiceSummary = {
-      id: 'u' + Date.now(),
-      partner,
-      invoiceNo: partner === 'Synlab' ? 'SYN-05-2026' : partner === 'PERH' ? 'PERH-2026-05' : partner === 'Medicover' ? 'MED-05-2026' : 'QM-2026-05',
-      period: '2026-05',
-      uploaded: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-      lines: Math.floor(Math.random() * 800 + 200),
-      disc: Math.floor(Math.random() * 15) + 2,
-      risk: Math.round((Math.random() * 400 + 50) * 10) / 10,
-      status: 'review',
-    };
-    const updated = [newInvoice, ...invoices];
-    setInvoices(updated);
-    saveInvoices(updated);
-    setUploadOpen(false);
-    navigate('/reconciling', { state: { fileName: uploadedFile?.name ?? 'partner_invoice.pdf' } });
+  const addInvoiceAndReconcile = async () => {
+    if (!uploadedArve || !uploadedLisa) return;
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append('arve', uploadedArve);
+      body.append('lisa', uploadedLisa);
+      const res = await fetch('/api/reconcile', { method: 'POST', body });
+      if (!res.ok) throw new Error(await res.text());
+      const newInvoice: InvoiceSummary = await res.json();
+      const updated = [newInvoice, ...invoices];
+      setInvoices(updated);
+      saveInvoices(updated);
+      setUploadOpen(false);
+      setUploadedArve(null);
+      setUploadedLisa(null);
+      navigate('/reconciling', { state: { fileName: uploadedArve.name, invoiceId: newInvoice.id } });
+    } catch (err) {
+      alert(`Reconciliation failed: ${err}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const statusLabel: Record<InvoiceStatus, string> = {
@@ -396,51 +411,81 @@ export default function Dashboard() {
               </div>
               <button onClick={() => setUploadOpen(false)} className="text-[#9A9484] p-1"><X size={20} /></button>
             </div>
-            <div className="p-[22px]">
-              <div className="border-2 border-dashed border-[#D7C9A8] bg-[#F6EFDD] rounded-xl px-6 py-[38px] text-center">
-                <div className="w-12 h-12 rounded-xl bg-ink text-cream-card flex items-center justify-center mx-auto mb-3.5">
-                  <Upload size={22} />
-                </div>
-                {uploadedFile ? (
-                  <div>
-                    <div className="text-[14px] font-semibold truncate max-w-[420px] mx-auto">{uploadedFile.name}</div>
-                    <div className="text-[12px] text-muted mt-1 font-mono">{(uploadedFile.size / 1024).toFixed(0)} {t('uploadModal.kb')}</div>
-                    <button onClick={() => setUploadedFile(null)} className="text-[11.5px] text-gold font-semibold mt-2 underline">{t('uploadModal.chooseDifferent')}</button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-[15px] font-semibold">{t('uploadModal.dropzone')}</div>
-                    <div className="text-[13px] text-muted mt-1">
-                      {'or '}
-                      <span
-                        className="text-gold font-semibold underline cursor-pointer"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        {t('uploadModal.browseFiles')}
-                      </span>
-                    </div>
-                    <div className="text-[11.5px] text-[#A89F88] mt-3 font-mono">{t('uploadModal.pdfLimit')}</div>
-                  </>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) setUploadedFile(f); }}
-                />
-              </div>
-              <div className="flex items-center gap-2.5 mt-4 bg-white border border-[#ECE6D8] rounded-[10px] px-3.5 py-[11px]">
+            <div className="p-[22px] flex flex-col gap-3">
+              <FileSlot
+                label={t('uploadModal.arveLabel', 'Partner invoice (Arve)')}
+                file={uploadedArve}
+                inputRef={fileInputRef}
+                onClear={() => setUploadedArve(null)}
+                onChange={(f) => setUploadedArve(f)}
+              />
+              <FileSlot
+                label={t('uploadModal.lisaLabel', 'Appendix (Lisa)')}
+                file={uploadedLisa}
+                inputRef={lisaInputRef}
+                onClear={() => setUploadedLisa(null)}
+                onChange={(f) => setUploadedLisa(f)}
+              />
+              <div className="flex items-center gap-2.5 bg-white border border-[#ECE6D8] rounded-[10px] px-3.5 py-[11px]">
                 <Info size={15} className="text-[#6E6A5E] shrink-0" />
                 <span className="text-[13px] text-[#6E6A5E]">{t('uploadModal.info')}</span>
               </div>
             </div>
             <div className="flex items-center justify-end gap-2.5 px-[22px] py-4 border-t border-[#ECE6D8] bg-cream-panel">
-              <button onClick={() => setUploadOpen(false)} className="bg-white border border-[#D9D2C0] rounded-[9px] px-4 py-2.5 text-[13.5px] font-semibold text-[#4A5568]">{t('uploadModal.cancel')}</button>
-              <button onClick={addInvoiceAndReconcile} className="bg-ink text-cream-card rounded-[9px] px-[18px] py-2.5 text-[13.5px] font-semibold">{t('uploadModal.startReconciliation')}</button>
+              <button onClick={() => { setUploadOpen(false); setUploadedArve(null); setUploadedLisa(null); }} className="bg-white border border-[#D9D2C0] rounded-[9px] px-4 py-2.5 text-[13.5px] font-semibold text-[#4A5568]">{t('uploadModal.cancel')}</button>
+              <button
+                onClick={addInvoiceAndReconcile}
+                disabled={!uploadedArve || !uploadedLisa || uploading}
+                className="bg-ink text-cream-card rounded-[9px] px-[18px] py-2.5 text-[13.5px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {uploading ? t('uploadModal.uploading', 'Uploading…') : t('uploadModal.startReconciliation')}
+              </button>
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function FileSlot({
+  label, file, inputRef, onClear, onChange,
+}: {
+  label: string;
+  file: File | null;
+  inputRef: React.RefObject<HTMLInputElement>;
+  onClear: () => void;
+  onChange: (f: File) => void;
+}) {
+  return (
+    <div>
+      <div className="text-[11.5px] font-semibold text-[#6E6A5E] mb-1.5">{label}</div>
+      {file ? (
+        <div className="flex items-center gap-2.5 border border-[#D9D2C0] bg-white rounded-xl px-3.5 py-2.5">
+          <div className="flex-1 min-w-0">
+            <div className="text-[13.5px] font-semibold truncate">{file.name}</div>
+            <div className="text-[11px] text-muted font-mono mt-0.5">{(file.size / 1024).toFixed(0)} KB</div>
+          </div>
+          <button onClick={onClear} className="text-[11.5px] text-gold font-semibold underline whitespace-nowrap">Change</button>
+        </div>
+      ) : (
+        <label className="flex items-center gap-3 border-2 border-dashed border-[#D7C9A8] bg-[#F6EFDD] rounded-xl px-4 py-3 cursor-pointer hover:border-gold hover:bg-[#F4ECD5] transition-colors">
+          <Upload size={16} className="text-[#9A9484] shrink-0" />
+          <span className="text-[13px] text-[#6E6A5E]">
+            Drop or{' '}
+            <span className="text-gold font-semibold" onClick={(e) => { e.preventDefault(); inputRef.current?.click(); }}>
+              browse
+            </span>
+            {' '}— PDF up to 25 MB
+          </span>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onChange(f); }}
+          />
+        </label>
       )}
     </div>
   );
