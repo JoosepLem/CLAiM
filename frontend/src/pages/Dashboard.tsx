@@ -1,17 +1,19 @@
 import { useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Upload, ChevronDown, ArrowRight, Check, X, Info, Trash2 } from 'lucide-react';
 import Wordmark from '../components/Wordmark';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import {
   INVOICES, PARTNERS, MONOGRAM, PRESETS, DEFAULT_RANGE,
   type InvoiceSummary, type InvoiceStatus,
 } from '../data/invoices';
 import { money, num, rangeLabel, periodInRange, MONTHS } from '../lib/format';
 
-const STATUS: Record<InvoiceStatus, { label: string; pill: string; dot: string }> = {
-  review:     { label: 'Needs review', pill: 'bg-[#F3EBD7] text-[#8A6A1E]', dot: 'bg-gold' },
-  reconciled: { label: 'Reconciled',   pill: 'bg-[#E6EFE8] text-[#3C7355]', dot: 'bg-[#3C7355]' },
-  processing: { label: 'Reconciling',  pill: 'bg-[#E9EBF3] text-[#4A5A8C]', dot: 'bg-[#4A5A8C]' },
+const statusStyle: Record<InvoiceStatus, { pill: string; dot: string }> = {
+  review:     { pill: 'bg-[#F3EBD7] text-[#8A6A1E]', dot: 'bg-gold' },
+  reconciled: { pill: 'bg-[#E6EFE8] text-[#3C7355]', dot: 'bg-[#3C7355]' },
+  processing: { pill: 'bg-[#E9EBF3] text-[#4A5A8C]', dot: 'bg-[#4A5A8C]' },
 };
 
 const microLabel = 'font-mono text-[10px] tracking-[0.06em] uppercase text-[#9A9484]';
@@ -48,6 +50,7 @@ function saveInvoices(list: InvoiceSummary[]) {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [partner, setPartner] = useState('all');
   const [from, setFrom] = useState(DEFAULT_RANGE.from);
@@ -132,7 +135,24 @@ export default function Dashboard() {
     navigate('/reconciling', { state: { fileName: uploadedFile?.name ?? 'partner_invoice.pdf' } });
   };
 
-  const partnerOptions = [{ val: 'all', label: 'All partners' }, ...PARTNERS.map((p) => ({ val: p, label: p }))];
+  const statusLabel: Record<InvoiceStatus, string> = {
+    review: t('status.needsReview'),
+    reconciled: t('status.reconciled'),
+    processing: t('status.reconciling'),
+  };
+
+  const presetLabels: Record<string, string> = {
+    'Last month': t('dashboard.lastMonth'),
+    'This month': t('dashboard.thisMonth'),
+    'Last 3 months': t('dashboard.last3Months'),
+    'Year to date': t('dashboard.yearToDate'),
+    'All time': t('dashboard.allTime'),
+  };
+
+  const partnerOptions = useMemo(() => [
+    { val: 'all', label: t('dashboard.allPartners') },
+    ...PARTNERS.map((p) => ({ val: p, label: p })),
+  ], [t]);
 
   return (
     <div className="min-h-screen bg-cream font-sans text-ink px-6 pt-9 pb-16">
@@ -143,7 +163,8 @@ export default function Dashboard() {
         <div className="flex items-center justify-between px-0.5 pb-[26px]">
           <Wordmark className="text-[25px]" />
           <div className="flex items-center gap-3.5">
-            <span className="text-[13px] text-muted">Reconciliation</span>
+            <span className="text-[13px] text-muted">{t('nav.reconciliation')}</span>
+            <LanguageSwitcher />
             <div className="w-[34px] h-[34px] rounded-full bg-ink text-cream-card flex items-center justify-center text-[12px] font-semibold font-mono">
               AK
             </div>
@@ -153,16 +174,16 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex items-end justify-between gap-6 mb-[22px]">
           <div>
-            <h1 className="text-[29px] font-bold tracking-[-0.02em]">Invoices</h1>
+            <h1 className="text-[29px] font-bold tracking-[-0.02em]">{t('dashboard.title')}</h1>
             <p className="text-[14.5px] text-muted mt-1">
-              Reconcile partner invoices against patient claims, all in one place.
+              {t('dashboard.subtitle')}
             </p>
           </div>
           <button
             onClick={() => { setUploadOpen(true); setOpenMenu(null); }}
             className="inline-flex items-center gap-2 bg-ink text-cream-card rounded-[10px] px-[18px] py-3 text-[14px] font-semibold whitespace-nowrap hover:bg-[#2C3E4F] transition-colors"
           >
-            <Upload size={16} /> Upload invoice
+            <Upload size={16} /> {t('dashboard.uploadInvoice')}
           </button>
         </div>
 
@@ -172,8 +193,8 @@ export default function Dashboard() {
             {/* Partner */}
             <div className="relative z-50">
               <button className={fieldBtn} onClick={() => setOpenMenu((m) => (m === 'partner' ? null : 'partner'))}>
-                <span className={microLabel}>Partner</span>
-                {partner === 'all' ? 'All partners' : partner}
+                <span className={microLabel}>{t('dashboard.partner')}</span>
+                {partner === 'all' ? t('dashboard.allPartners') : partner}
                 <ChevronDown size={13} className="text-[#9A9484]" />
               </button>
               {openMenu === 'partner' && (
@@ -191,27 +212,27 @@ export default function Dashboard() {
             {/* Period (date range) */}
             <div className="relative z-50">
               <button className={fieldBtn} onClick={openPeriod}>
-                <span className={microLabel}>Period</span>
+                <span className={microLabel}>{t('dashboard.period')}</span>
                 {periodLabel}
                 <ChevronDown size={13} className="text-[#9A9484]" />
               </button>
               {openMenu === 'period' && (
                 <div className="absolute top-[calc(100%_+_6px)] left-0 w-[300px] bg-white border border-line rounded-xl shadow-[0_12px_30px_-12px_rgba(40,30,10,0.3)] p-2.5 z-50">
-                  <div className={`${microLabel} px-[7px] pt-1 pb-1.5`}>Quick ranges</div>
+                  <div className={`${microLabel} px-[7px] pt-1 pb-1.5`}>{t('dashboard.quickRanges')}</div>
                   {PRESETS.map((p) => {
                     const sel = from === p.from && to === p.to;
                     return (
                       <div key={p.label} className={menuItemCls(sel)} onClick={() => { setFrom(p.from); setTo(p.to); setDraftFrom(p.from); setDraftTo(p.to); setOpenMenu(null); }}>
-                        {p.label}
+                        {presetLabels[p.label]}
                         {sel && <Check size={14} className="ml-auto text-gold" />}
                       </div>
                     );
                   })}
                   <div className="h-px bg-line my-2 mx-1" />
-                  <div className={`${microLabel} px-[7px] pt-0.5 pb-2`}>Custom range</div>
+                  <div className={`${microLabel} px-[7px] pt-0.5 pb-2`}>{t('dashboard.customRange')}</div>
                   <div className="flex gap-2 px-[5px]">
                     <label className="flex-1 block">
-                      <span className="block text-[11px] text-muted mb-1">From</span>
+                      <span className="block text-[11px] text-muted mb-1">{t('dashboard.from')}</span>
                       <input
                         type="date"
                         value={draftFrom}
@@ -220,7 +241,7 @@ export default function Dashboard() {
                       />
                     </label>
                     <label className="flex-1 block">
-                      <span className="block text-[11px] text-muted mb-1">To</span>
+                      <span className="block text-[11px] text-muted mb-1">{t('dashboard.to')}</span>
                       <input
                         type="date"
                         value={draftTo}
@@ -230,7 +251,7 @@ export default function Dashboard() {
                     </label>
                   </div>
                   <button onClick={applyRange} className="w-[calc(100%_-_10px)] mx-[5px] mt-2.5 mb-1 bg-ink text-cream-card rounded-[9px] py-2.5 text-[13.5px] font-semibold">
-                    Apply range
+                    {t('dashboard.applyRange')}
                   </button>
                 </div>
               )}
@@ -238,61 +259,67 @@ export default function Dashboard() {
 
             {filtersActive && (
               <button onClick={reset} className="text-[13px] text-gold font-semibold px-1 py-2">
-                Reset
+                {t('dashboard.reset')}
               </button>
             )}
           </div>
           <div className="text-[13px] text-muted">
-            {filtered.length} invoices · {periodLabel}
+            {filtered.length} {t('dashboard.title').toLowerCase()} · {periodLabel}
           </div>
         </div>
 
         {/* KPIs */}
         <div className="grid grid-cols-[1.25fr_1fr_1fr] gap-3.5 mb-5">
           <div className="bg-[#FBF1EC] border border-[#EBD7CC] rounded-[13px] px-5 py-[17px]">
-            <div className="font-mono text-[10.5px] tracking-[0.07em] uppercase text-danger">Money at risk</div>
+            <div className="font-mono text-[10.5px] tracking-[0.07em] uppercase text-danger">{t('dashboard.moneyAtRisk')}</div>
             <div className="font-mono text-[32px] font-semibold text-danger mt-1.5 tracking-[-0.01em]">{money(agg.money)}</div>
-            <div className="text-[13px] text-[#A06B52] mt-0.5">across {agg.disc} open discrepancies</div>
+            <div className="text-[13px] text-[#A06B52] mt-0.5">{t('dashboard.acrossDiscrepancies', { count: agg.disc })}</div>
           </div>
           <div className="bg-cream-card border border-line rounded-[13px] px-5 py-[17px]">
-            <div className="font-mono text-[10.5px] tracking-[0.07em] uppercase text-[#9A9484]">Discrepancies left</div>
+            <div className="font-mono text-[10.5px] tracking-[0.07em] uppercase text-[#9A9484]">{t('dashboard.discrepanciesLeft')}</div>
             <div className="font-mono text-[32px] font-semibold text-ink mt-1.5 tracking-[-0.01em]">{agg.disc}</div>
-            <div className="text-[13px] text-muted mt-0.5">{agg.needsReview} invoices need review</div>
+            <div className="text-[13px] text-muted mt-0.5">{t('dashboard.invoicesNeedReview', { count: agg.needsReview })}</div>
           </div>
           <div className="bg-cream-card border border-line rounded-[13px] px-5 py-[17px]">
-            <div className="font-mono text-[10.5px] tracking-[0.07em] uppercase text-[#9A9484]">Invoices in period</div>
+            <div className="font-mono text-[10.5px] tracking-[0.07em] uppercase text-[#9A9484]">{t('dashboard.invoicesInPeriod')}</div>
             <div className="font-mono text-[32px] font-semibold text-ink mt-1.5 tracking-[-0.01em]">{filtered.length}</div>
-            <div className="text-[13px] text-muted mt-0.5">{agg.reconciled} reconciled · {agg.processing} processing</div>
+            <div className="text-[13px] text-muted mt-0.5">{agg.reconciled} {t('dashboard.reconciled')} · {agg.processing} {t('dashboard.processing')}</div>
           </div>
         </div>
 
         {/* Table */}
         <div className="bg-cream-card border border-line rounded-[14px] shadow-[0_1px_3px_rgba(40,30,10,0.06),0_14px_30px_-20px_rgba(40,30,10,0.2)] overflow-hidden">
           <div className="grid grid-cols-[1.7fr_150px_84px_132px_132px_142px_22px] gap-3.5 px-[22px] py-3.5 bg-[#F3EFE4] border-b border-[#E6DFCF] font-mono text-[10px] tracking-[0.06em] uppercase text-[#9A9484]">
-            <span>Partner / Invoice</span>
-            <span>Period</span>
-            <span className="text-right">Lines</span>
-            <span className="text-center">Discrepancies</span>
-            <span className="text-right">Money at risk</span>
-            <span>Status</span>
+            <span>{t('dashboard.partner')} / Invoice</span>
+            <span>{t('dashboard.period')}</span>
+            <span className="text-right">{t('dashboard.lines')}</span>
+            <span className="text-center">{t('dashboard.discrepancies')}</span>
+            <span className="text-right">{t('dashboard.moneyAtRisk')}</span>
+            <span>{t('dashboard.status')}</span>
             <span />
           </div>
 
           {filtered.map((inv) => {
-            const st = STATUS[inv.status];
+            const st = statusStyle[inv.status];
             const clickable = inv.status !== 'processing';
-            const disc =
+            const discText =
               inv.status === 'processing'
-                ? { text: '—', cls: 'bg-[#EEEADD] text-[#A89F88]' }
+                ? '—'
                 : (inv.disc ?? 0) > 0
-                ? { text: `${inv.disc} open`, cls: 'bg-[#F4E7E0] text-danger' }
-                : { text: '✓ Clear', cls: 'bg-[#E6EFE8] text-[#3C7355]' };
+                ? `${inv.disc} ${t('dashboard.open')}`
+                : `\u2713 ${t('dashboard.clear')}`;
+            const discCls =
+              inv.status === 'processing'
+                ? 'bg-[#EEEADD] text-[#A89F88]'
+                : (inv.disc ?? 0) > 0
+                ? 'bg-[#F4E7E0] text-danger'
+                : 'bg-[#E6EFE8] text-[#3C7355]';
             const riskCell =
               inv.status === 'processing'
-                ? { text: '—', cls: 'text-[#B5AF9E]' }
+                ? { text: '\u2014', cls: 'text-[#B5AF9E]' }
                 : (inv.risk ?? 0) > 0
                 ? { text: money(inv.risk as number), cls: 'text-danger' }
-                : { text: '—', cls: 'text-[#B5AF9E]' };
+                : { text: '\u2014', cls: 'text-[#B5AF9E]' };
             return (
               <div
                 key={inv.id}
@@ -310,14 +337,14 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <div className="text-[13.5px]">{periodLabelOf(inv.period)}</div>
-                  <div className="text-[11.5px] text-[#9A9484] mt-px">uploaded {inv.uploaded}</div>
+                  <div className="text-[11.5px] text-[#9A9484] mt-px">{t('dashboard.uploaded')} {inv.uploaded}</div>
                 </div>
                 <div className="text-right font-mono text-[13.5px] text-[#6E6A5E]">
-                  {inv.lines == null ? '—' : num(inv.lines)}
+                  {inv.lines == null ? '\u2014' : num(inv.lines)}
                 </div>
                 <div className="text-center">
-                  <span className={`inline-block font-mono text-[12px] font-semibold px-2.5 py-1 rounded-[7px] whitespace-nowrap ${disc.cls}`}>
-                    {disc.text}
+                  <span className={`inline-block font-mono text-[12px] font-semibold px-2.5 py-1 rounded-[7px] whitespace-nowrap ${discCls}`}>
+                    {discText}
                   </span>
                 </div>
                 <div className={`text-right font-mono text-[14.5px] font-semibold ${riskCell.cls}`}>
@@ -326,7 +353,7 @@ export default function Dashboard() {
                 <div>
                   <span className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-[11px] py-[5px] rounded-full whitespace-nowrap ${st.pill}`}>
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot}`} />
-                    {st.label}
+                    {statusLabel[inv.status]}
                   </span>
                 </div>
                 <div className="text-right text-[#C2B89F] flex items-center justify-end gap-0.5">
@@ -345,8 +372,8 @@ export default function Dashboard() {
 
           {filtered.length === 0 && (
             <div className="py-[54px] px-6 text-center">
-              <div className="text-[15px] text-[#6E6A5E] font-semibold">No invoices match these filters</div>
-              <div className="text-[13.5px] text-[#9A9484] mt-1.5">Try a different partner or period, or upload a new invoice.</div>
+              <div className="text-[15px] text-[#6E6A5E] font-semibold">{t('dashboard.noInvoices')}</div>
+              <div className="text-[13.5px] text-[#9A9484] mt-1.5">{t('dashboard.noInvoicesHint')}</div>
             </div>
           )}
         </div>
@@ -354,7 +381,7 @@ export default function Dashboard() {
         {/* Footer brand */}
         <div className="flex items-center gap-2 justify-center mt-[26px] opacity-70">
           <Wordmark className="text-[14px]" />
-          <span className="text-[12px] text-[#9A9484] font-mono">Automated invoice reconciliation</span>
+          <span className="text-[12px] text-[#9A9484] font-mono">{t('nav.automatedInvoiceReconciliation')}</span>
         </div>
       </div>
 
@@ -364,8 +391,8 @@ export default function Dashboard() {
           <div className="w-[540px] max-w-full bg-cream-card border border-line rounded-2xl shadow-[0_30px_70px_-20px_rgba(20,14,4,0.5)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-[22px] py-5 border-b border-[#ECE6D8]">
               <div>
-                <div className="text-[18px] font-bold">Upload partner invoice</div>
-                <div className="text-[13px] text-muted mt-0.5">We'll detect the partner and period automatically.</div>
+                <div className="text-[18px] font-bold">{t('uploadModal.title')}</div>
+                <div className="text-[13px] text-muted mt-0.5">{t('uploadModal.subtitle')}</div>
               </div>
               <button onClick={() => setUploadOpen(false)} className="text-[#9A9484] p-1"><X size={20} /></button>
             </div>
@@ -377,22 +404,22 @@ export default function Dashboard() {
                 {uploadedFile ? (
                   <div>
                     <div className="text-[14px] font-semibold truncate max-w-[420px] mx-auto">{uploadedFile.name}</div>
-                    <div className="text-[12px] text-muted mt-1 font-mono">{(uploadedFile.size / 1024).toFixed(0)} KB</div>
-                    <button onClick={() => setUploadedFile(null)} className="text-[11.5px] text-gold font-semibold mt-2 underline">Choose different file</button>
+                    <div className="text-[12px] text-muted mt-1 font-mono">{(uploadedFile.size / 1024).toFixed(0)} {t('uploadModal.kb')}</div>
+                    <button onClick={() => setUploadedFile(null)} className="text-[11.5px] text-gold font-semibold mt-2 underline">{t('uploadModal.chooseDifferent')}</button>
                   </div>
                 ) : (
                   <>
-                    <div className="text-[15px] font-semibold">Drag &amp; drop the partner PDF here</div>
+                    <div className="text-[15px] font-semibold">{t('uploadModal.dropzone')}</div>
                     <div className="text-[13px] text-muted mt-1">
-                      or{' '}
+                      {'or '}
                       <span
                         className="text-gold font-semibold underline cursor-pointer"
                         onClick={() => fileInputRef.current?.click()}
                       >
-                        browse your files
+                        {t('uploadModal.browseFiles')}
                       </span>
                     </div>
-                    <div className="text-[11.5px] text-[#A89F88] mt-3 font-mono">PDF · up to 25 MB</div>
+                    <div className="text-[11.5px] text-[#A89F88] mt-3 font-mono">{t('uploadModal.pdfLimit')}</div>
                   </>
                 )}
                 <input
@@ -405,12 +432,12 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-2.5 mt-4 bg-white border border-[#ECE6D8] rounded-[10px] px-3.5 py-[11px]">
                 <Info size={15} className="text-[#6E6A5E] shrink-0" />
-                <span className="text-[13px] text-[#6E6A5E]">Reconciliation against patient claims starts as soon as the upload finishes.</span>
+                <span className="text-[13px] text-[#6E6A5E]">{t('uploadModal.info')}</span>
               </div>
             </div>
             <div className="flex items-center justify-end gap-2.5 px-[22px] py-4 border-t border-[#ECE6D8] bg-cream-panel">
-              <button onClick={() => setUploadOpen(false)} className="bg-white border border-[#D9D2C0] rounded-[9px] px-4 py-2.5 text-[13.5px] font-semibold text-[#4A5568]">Cancel</button>
-              <button onClick={addInvoiceAndReconcile} className="bg-ink text-cream-card rounded-[9px] px-[18px] py-2.5 text-[13.5px] font-semibold">Start reconciliation</button>
+              <button onClick={() => setUploadOpen(false)} className="bg-white border border-[#D9D2C0] rounded-[9px] px-4 py-2.5 text-[13.5px] font-semibold text-[#4A5568]">{t('uploadModal.cancel')}</button>
+              <button onClick={addInvoiceAndReconcile} className="bg-ink text-cream-card rounded-[9px] px-[18px] py-2.5 text-[13.5px] font-semibold">{t('uploadModal.startReconciliation')}</button>
             </div>
           </div>
         </div>

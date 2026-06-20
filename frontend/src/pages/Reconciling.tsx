@@ -1,21 +1,24 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle2 } from 'lucide-react';
 import Wordmark from '../components/Wordmark';
-
-const STEPS = [
-  { label: 'Parsing PDF', description: 'Extracting line items from partner invoice' },
-  { label: 'Cross-referencing', description: 'Matching against patient claims database' },
-  { label: 'Flagging discrepancies', description: 'Identifying mismatches and missing claims' },
-  { label: 'Building report', description: 'Generating reconciliation summary' },
-] as const;
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 type StepStatus = 'pending' | 'running' | 'done';
 
 export default function Reconciling() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const fileName = (location.state as { fileName?: string })?.fileName ?? 'partner_invoice.pdf';
+
+  const STEPS = [
+    { label: t('reconciling.step1Label'), description: t('reconciling.step1Desc') },
+    { label: t('reconciling.step2Label'), description: t('reconciling.step2Desc') },
+    { label: t('reconciling.step3Label'), description: t('reconciling.step3Desc') },
+    { label: t('reconciling.step4Label'), description: t('reconciling.step4Desc') },
+  ];
 
   const [stepIdx, setStepIdx] = useState(-1);
   const [overallPct, setOverallPct] = useState(0);
@@ -74,16 +77,19 @@ export default function Reconciling() {
 
   return (
     <div className="min-h-screen bg-cream font-sans text-ink flex flex-col">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-[560px] max-w-full">
           <div className="text-center mb-9">
             <Wordmark className="text-[32px]" />
-            <p className="text-[15px] text-muted mt-2.5">Reconciling your invoice</p>
+            <p className="text-[15px] text-muted mt-2.5">{t('reconciling.title')}</p>
           </div>
 
           <div className="bg-cream-card border border-line rounded-2xl shadow-[0_1px_3px_rgba(40,30,10,0.06),0_14px_30px_-20px_rgba(40,30,10,0.2)] overflow-hidden">
             <div className="px-[26px] pt-[26px] pb-5 border-b border-[#ECE6D8]">
-              <div className="text-[18px] font-bold">Reconciliation in progress</div>
+              <div className="text-[18px] font-bold">{t('reconciling.inProgress')}</div>
               <div className="text-[13px] text-muted mt-0.5 font-mono truncate">
                 {fileName}
               </div>
@@ -110,7 +116,7 @@ export default function Reconciling() {
                       </div>
                     </div>
                     {status === 'done' && (
-                      <span className="text-[11.5px] text-[#6E9E7A] font-mono mt-0.5">OK</span>
+                      <span className="text-[11.5px] text-[#6E9E7A] font-mono mt-0.5">{t('reconciling.ok')}</span>
                     )}
                     {status === 'running' && (
                       <span className="text-[11.5px] text-gold font-mono mt-0.5 animate-pulse">…</span>
@@ -126,16 +132,16 @@ export default function Reconciling() {
                 />
               </div>
               <div className="flex justify-between mt-2 text-[11px] font-mono text-[#B5AF9E]">
-                <span>{overallPct}% complete</span>
+                <span>{overallPct}{t('reconciling.percentComplete')}</span>
                 <span>
-                  {done ? '847 / 847 lines processed' : `${Math.floor(overallPct * 8.47)} / 847`}
+                  {done ? `847 / 847 ${t('reconciling.linesProcessed')}` : `${Math.floor(overallPct * 8.47)} / 847`}
                 </span>
               </div>
 
               {done && (
                 <div className="mt-4 bg-[#E6EFE8] border border-[#C8DBCB] rounded-[10px] px-4 py-3 flex items-center gap-2.5 text-[13.5px] text-[#3C7355] font-semibold">
                   <CheckCircle2 size={17} />
-                  Reconciliation complete. 14 discrepancies found. Redirecting to report…
+                  {t('reconciling.complete', { count: 14 })}
                 </div>
               )}
             </div>
@@ -143,7 +149,7 @@ export default function Reconciling() {
 
           <div className="flex items-center gap-2 justify-center mt-[22px] opacity-70">
             <Wordmark className="text-[13px]" />
-            <span className="text-[11.5px] text-[#9A9484] font-mono">Automated invoice reconciliation</span>
+            <span className="text-[11.5px] text-[#9A9484] font-mono">{t('nav.automatedInvoiceReconciliation')}</span>
           </div>
         </div>
       </div>
