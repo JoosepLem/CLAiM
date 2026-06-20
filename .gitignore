@@ -1,8 +1,15 @@
-# Tundlikud andmefailid — ära pane GitHubi
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/dist-node/
+*.tsbuildinfo
+*.local
+
+# Sensitive data files
 *.pdf
 *.png
 
-# Genereeritud CSV väljundid
+# Generated CSV output
 tests/real_test/tulemus.csv
 *.csv
 
@@ -14,7 +21,7 @@ dist/
 build/
 .eggs/
 
-# Virtuaalkeskkond
+# Virtual environment
 .venv/
 venv/
 env/
@@ -23,5 +30,5 @@ env/
 .vscode/
 .idea/
 
-# Keskkond
+# Environment
 .env
