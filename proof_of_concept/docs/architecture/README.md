@@ -41,13 +41,12 @@ Note: The POC uses username-only authentication (no ID-card). User management is
 
 ## Diagrams
 
-- [System Context](diagrams/system-context/system-context.mmd)
-- [Containers](diagrams/containers/containers.mmd)
-- [Components — Web Application](diagrams/components/spring-boot-app/components.mmd)
-- [Components — Database](diagrams/components/postgres/components.mmd)
-- [Deployment](diagrams/deployment/deployment-poc.mmd)
+- [System Context](diagrams/system-context/system-context.md)
+- [Containers](diagrams/containers/containers.md)
+- [Components — Web Application](diagrams/components/spring-boot-app/components.md)
+- [Components — Database](diagrams/components/postgres/components.md)
+- [Deployment](diagrams/deployment/deployment-poc.md)
 
 ## References
 
 - [POC Scope Document](../POC_SCOPE.md)
-- [Main CLAiM Architecture](../../docs/architecture/README.md)
