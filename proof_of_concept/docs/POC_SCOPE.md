@@ -295,7 +295,41 @@ For each line on a partner invoice, find a corresponding treatment invoice line 
 
 ---
 
-### 15. Secure Invoice Upload
+### 15. Reconciliation Storage
+
+**Decision:** Reconciliation runs and results are stored in per-tenant schemas for historical review without re-running matching.
+
+**`reconciliation_runs`** — one row per reconciliation execution:
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | Primary key |
+| triggered_by | TEXT | Username who triggered the run |
+| run_at | TIMESTAMPTZ | When the run was started |
+| status | TEXT | `running`, `completed`, `failed` |
+| total_matched | INTEGER | |
+| total_amount_mismatch | INTEGER | |
+| total_unmatched | INTEGER | |
+
+**`reconciliation_results`** — one row per partner line comparison. Contains no personal data:
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | Primary key |
+| run_id | UUID | FK to reconciliation_runs |
+| partner_invoice_id | UUID | FK to partner_invoices — for per-invoice display in the UI |
+| partner_invoice_line_id | UUID | FK to partner_invoice_lines |
+| treatment_invoice_line_id | UUID | FK to treatment_invoice_lines, nullable if unmatched |
+| match_status | TEXT | `matched`, `amount_mismatch`, `unmatched` |
+| partner_amount | NUMERIC | |
+| treatment_amount | NUMERIC | Nullable if unmatched |
+| amount_difference | NUMERIC | Nullable if unmatched |
+
+**Audit interaction:** `reconciliation_results` contains only line IDs and amounts — no personal data. However, the reconciliation engine accesses `treatment_invoice_lines` and `partner_invoice_lines` (which contain encrypted isikukood) during matching. Each access generates a READ audit event via the audit service, preserving the audit trail for personal data access separately from result storage.
+
+---
+
+### 16. Secure Invoice Upload
 
 **Decision:** Web UI file upload with validation.
 
@@ -312,7 +346,7 @@ Error handling is rudimental for the POC: invalid/corrupt PDFs return an error m
 
 ---
 
-### 16. General Notes
+### 17. General Notes
 
 - **Technology stack:** Spring Boot (Kotlin), PostgreSQL on AWS RDS, Thymeleaf server-rendered UI, Gradle (Kotlin DSL), Docker Compose for local PostgreSQL
 - **Frontend:** Thymeleaf for the POC; may adopt a frontend framework later
