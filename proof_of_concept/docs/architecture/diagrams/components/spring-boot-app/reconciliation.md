@@ -15,7 +15,7 @@ C4Component
         Component(audit_svc, "Audit Service", "Kotlin service", "Logs READ events when reconciliation engine accesses invoice data for matching.")
     }
 
-    ContainerDb(postgres, "Database", "PostgreSQL on AWS RDS", "treatment_invoices and partner_invoices queried by isikukood_hash column (indexed).")
+    ContainerDb(postgres, "Database", "PostgreSQL on AWS RDS", "treatment_invoice_lines and partner_invoice_lines queried by isikukood_hash column (indexed). Joined to headers via invoice_id FK.")
 
     Rel(employee, ui, "Triggers reconciliation, views results", "HTTPS")
     Rel(ui, recon_engine, "Triggers matching run")

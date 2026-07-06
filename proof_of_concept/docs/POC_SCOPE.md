@@ -58,28 +58,52 @@ The POC is complete when all of the following questions have a satisfactory answ
 
 ### 3. Reading and Saving Only Necessary Data from Treatment Invoices
 
-**Fields stored for treatment invoice lines:**
+**Four tables per tenant schema:**
+
+`treatment_invoices` — header-level, one row per uploaded treatment invoice:
 
 | Field | Type | Notes |
 |---|---|---|
+| id | UUID | Primary key |
+| invoice_number | TEXT | Nullable, if present in the source |
+| uploaded_at | TIMESTAMPTZ | When the invoice was uploaded |
+| source_filename | TEXT | Original PDF filename |
+
+`treatment_invoice_lines` — line-level, one row per line item. Used by the reconciliation engine:
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | Primary key |
+| invoice_id | UUID | FK to treatment_invoices |
 | isikukood | BYTEA (encrypted) | AES-256-GCM encrypted with tenant DEK |
-| isikukood_hash | BYTEA | HMAC-SHA256 for exact-match lookups |
+| isikukood_hash | BYTEA | HMAC-SHA256 for exact-match lookups (indexed) |
 | procedure_code | TEXT | |
 | amount | NUMERIC | |
 | treatment_date | DATE | |
-| invoice_number | TEXT | Nullable, if present in the source |
 
-**Fields stored for partner invoice lines:**
+`partner_invoices` — header-level, one row per uploaded partner invoice:
 
 | Field | Type | Notes |
 |---|---|---|
+| id | UUID | Primary key |
+| invoice_number | TEXT | Nullable |
+| provider_name | TEXT | |
+| uploaded_at | TIMESTAMPTZ | |
+| source_filename | TEXT | |
+
+`partner_invoice_lines` — line-level, one row per line item. Used by the reconciliation engine:
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | Primary key |
+| invoice_id | UUID | FK to partner_invoices |
 | isikukood | BYTEA (encrypted) | Encrypted on parse, before persistence |
-| isikukood_hash | BYTEA | HMAC-SHA256 |
+| isikukood_hash | BYTEA | HMAC-SHA256 (indexed) |
 | procedure_code | TEXT | |
 | amount | NUMERIC | |
 | service_date | DATE | |
-| provider_name | TEXT | |
-| invoice_number | TEXT | Nullable |
+
+The reconciliation engine matches `treatment_invoice_lines` against `partner_invoice_lines` by isikukood_hash + procedure_code.
 
 **No** diagnosis codes, patient names, or personally identifiable data other than the isikukood. Only exact-match queries on isikukood (via HMAC hash column with index). No partial/prefix search needed.
 

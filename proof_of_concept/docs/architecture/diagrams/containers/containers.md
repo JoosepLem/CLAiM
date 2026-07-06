@@ -10,7 +10,7 @@ C4Container
     System_Boundary(claim, "CLAiM") {
         Container(spring_boot, "Web Application", "Spring Boot + Kotlin, Thymeleaf", "Server-rendered web UI. Handles username-based JWT authentication, invoice upload and PDF parsing, column-level envelope encryption, HMAC-based invoice matching, and audit logging.")
 
-        ContainerDb(postgres, "Database", "PostgreSQL on AWS RDS", "User-to-tenant mapping in public schema. Encrypted invoice data in per-tenant schemas. Tenant DEKs in tenant_keys table. Append-only audit log with hash chain integrity.")
+        ContainerDb(postgres, "Database", "PostgreSQL on AWS RDS", "User-to-tenant mapping in public schema. Invoice headers and encrypted line items in per-tenant schemas (treatment_invoice_lines, partner_invoice_lines). Tenant DEKs in tenant_keys table. Append-only audit log with hash chain integrity.")
     }
 
     Rel(employee, spring_boot, "Uploads invoices, views reconciliation results", "HTTPS")

@@ -17,7 +17,7 @@ C4Component
         Component(audit_svc, "Audit Service", "Kotlin service", "Logs CREATE events via SECURITY DEFINER PostgreSQL function after invoice lines are persisted.")
     }
 
-    ContainerDb(postgres, "Database", "PostgreSQL on AWS RDS", "Per-tenant schemas: treatment_invoices, partner_invoices, tenant_keys.")
+    ContainerDb(postgres, "Database", "PostgreSQL on AWS RDS", "Per-tenant schemas: treatment_invoices, treatment_invoice_lines, partner_invoices, partner_invoice_lines, tenant_keys.")
 
     Rel(employee, ui, "Uploads invoice PDF", "HTTPS (multipart)")
     Rel(ui, invoice_svc, "Passes validated file stream")
