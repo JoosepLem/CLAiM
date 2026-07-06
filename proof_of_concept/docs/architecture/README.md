@@ -27,7 +27,7 @@ Note: The POC uses username-only authentication (no ID-card). User management is
 
 | Container | Technology | Role |
 |---|---|---|
-| Web Application | Spring Boot + Kotlin, Thymeleaf | Server-rendered UI. Handles auth, invoice upload/parsing, column-level encryption, reconciliation, and audit logging. |
+| Web Application | Spring Boot + Kotlin, Thymeleaf | Three server-rendered pages: login (`/login`), overview with embedded upload (`/dashboard`), and invoice detail with reconciliation results (`/invoices/{id}`). Handles JWT auth, PDF parsing, column-level encryption, reconciliation, and audit logging. |
 | Database | PostgreSQL on AWS RDS | Multi-tenant (schema per tenant). Invoice headers, encrypted line items, `tenant_keys`, `reconciliation_runs` and `reconciliation_results` (no personal data), user-to-tenant mapping, and append-only audit log with hash chain integrity. |
 
 ## Key Architectural Decisions

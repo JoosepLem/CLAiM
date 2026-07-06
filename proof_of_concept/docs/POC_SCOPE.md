@@ -264,7 +264,39 @@ interface InvoiceParser {
 
 ---
 
-### 13. Reconciliation Logic
+### 13. UI Page Structure
+
+**Decision:** Three Thymeleaf server-rendered pages, all scoped to the user's tenant via JWT.
+
+**1. Login page** (`/login`):
+- Single free-text username input field
+- No password — username-only auth for POC
+- On success: JWT set in secure cookie, redirect to overview
+- On failure: error message, retry
+
+**2. Overview page** (`/dashboard`):
+- Two visually distinct sections:
+  - **Partner invoices** — uploaded partner service invoices, each row shows upload date, provider, invoice number, reconciliation status, and match summary counts (matched / mismatch / unmatched)
+  - **Treatment invoices** — uploaded patient reimbursement invoices, each row shows upload date, invoice number
+- **Upload form** embedded on the page: multipart file picker for PDF, partner selector dropdown, submit button. After upload, invoice appears in the relevant section.
+- **Bulk reconciliation button** — triggers reconciliation across all partner invoices that have a treatment invoice for the same month
+- Each partner invoice row links to its detail page
+
+**3. Invoice detail page** (`/invoices/{id}`):
+- Displays reconciliation results for a single partner invoice
+- Sortable table with columns: partner invoice line details, matched treatment invoice line details, amount (both), difference, status
+- Status badges: matched (green), amount mismatch (yellow), unmatched (red)
+- Back link to overview
+
+**Reconciliation triggers:**
+- **Automatic** on partner invoice upload, if a treatment invoice exists for the same month
+- **Manual** via bulk button on the overview page
+
+**No** export functionality for the POC.
+
+---
+
+### 14. Reconciliation Logic
 
 **Match criteria:** Isikukood + procedure code.
 
@@ -282,20 +314,17 @@ For each line on a partner invoice, find a corresponding treatment invoice line 
 
 ---
 
-### 14. Reconciliation Results Display
+### 15. Reconciliation Results Display
 
-**Decision:** Table view (Thymeleaf server-rendered), scoped to the user's tenant.
+**Decision:** Shown on the invoice detail page (`/invoices/{id}`), Thymeleaf server-rendered, scoped to the user's tenant.
 
 - Sortable table with columns: partner invoice line, matched treatment invoice line, amount (both), difference, status
 - Status badges: matched (green), amount mismatch (yellow), unmatched (red)
-- No export functionality for the POC
-- Reconciliation trigger:
-  - **Automatic** on partner invoice upload
-  - **Manual** via "Run Reconciliation" button on the dashboard
+- Back link to overview
 
 ---
 
-### 15. Reconciliation Storage
+### 16. Reconciliation Storage
 
 **Decision:** Reconciliation runs and results are stored in per-tenant schemas for historical review without re-running matching.
 
@@ -329,11 +358,11 @@ For each line on a partner invoice, find a corresponding treatment invoice line 
 
 ---
 
-### 16. Secure Invoice Upload
+### 17. Secure Invoice Upload
 
 **Decision:** Web UI file upload with validation.
 
-- File picker in the browser (Thymeleaf form, multipart POST)
+- File picker embedded on the overview page (Thymeleaf form, multipart POST)
 - Endpoint requires valid JWT (tenant-scoped)
 - Validation:
   - File extension: `.pdf` only
@@ -346,7 +375,7 @@ Error handling is rudimental for the POC: invalid/corrupt PDFs return an error m
 
 ---
 
-### 17. General Notes
+### 18. General Notes
 
 - **Technology stack:** Spring Boot (Kotlin), PostgreSQL on AWS RDS, Thymeleaf server-rendered UI, Gradle (Kotlin DSL), Docker Compose for local PostgreSQL
 - **Frontend:** Thymeleaf for the POC; may adopt a frontend framework later

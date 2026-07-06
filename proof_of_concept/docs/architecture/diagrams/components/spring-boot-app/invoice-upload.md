@@ -3,12 +3,12 @@
 C4Component
     title Component diagram for Web Application — Invoice Upload Pipeline
 
-    Person(employee, "Medical Centre Employee", "Uploads a partner or treatment invoice PDF.")
+    Person(employee, "Medical Centre Employee", "Uploads a partner or treatment invoice PDF from the overview page.")
 
     Container_Boundary(spring_boot, "Web Application") {
-        Component(ui, "Invoice UI Controller", "Thymeleaf + Spring MVC", "Receives multipart file upload. Validates PDF extension, MIME type, and magic bytes. Returns parser feedback or errors to the view.")
+        Component(dashboard, "Dashboard Controller", "Thymeleaf + Spring MVC", "Renders overview page (`/dashboard`) with embedded upload form: file picker for PDF, partner selector dropdown, submit button. After upload, new invoice appears in the relevant section (partner or treatment).")
 
-        Component(invoice_svc, "Invoice Service", "Kotlin service", "Orchestrates the upload: validates file, routes to parser, encrypts isikukood and computes HMAC, persists invoice lines with key_version.")
+        Component(invoice_svc, "Invoice Service", "Kotlin service", "Orchestrates the upload: validates file, routes to parser, encrypts isikukood and computes HMAC, persists invoice header and lines with key_version.")
 
         Component(parser_registry, "Parser Registry", "Map<String, InvoiceParser>", "Strategy pattern. Auto-wired by Spring. Returns the InvoiceParser matching the partner ID for the uploaded invoice format.")
 
@@ -19,12 +19,12 @@ C4Component
 
     ContainerDb(postgres, "Database", "PostgreSQL on AWS RDS", "Per-tenant schemas: treatment_invoices, treatment_invoice_lines, partner_invoices, partner_invoice_lines, tenant_keys.")
 
-    Rel(employee, ui, "Uploads invoice PDF", "HTTPS (multipart)")
-    Rel(ui, invoice_svc, "Passes validated file stream")
+    Rel(employee, dashboard, "Selects PDF, partner, submits", "HTTPS (multipart)")
+    Rel(dashboard, invoice_svc, "Passes validated file stream and partner ID")
     Rel(invoice_svc, parser_registry, "Selects parser by partner ID")
     Rel(invoice_svc, encryption_svc, "Encrypts isikukood, computes HMAC hash")
     Rel(invoice_svc, audit_svc, "Logs CREATE event")
-    Rel(invoice_svc, postgres, "Persists encrypted invoice lines", "SQL/TCP (SSL)")
+    Rel(invoice_svc, postgres, "Persists invoice header and lines", "SQL/TCP (SSL)")
     Rel(encryption_svc, postgres, "Reads and writes encrypted DEKs", "SQL/TCP (SSL)")
     Rel(audit_svc, postgres, "Calls log_audit_event()", "SQL/TCP (SSL)")
 ```
