@@ -1,13 +1,16 @@
 ```mermaid
-C4Context
-    title System Context diagram for CLAiM — Proof of Concept
+flowchart LR
+    employee("Medical Centre Employee\n[Person]\nUploads partner and patient reimbursement invoices. Reviews automated reconciliation results and flagged discrepancies.")
+    claim["CLAiM\n[Software System]\nMulti-tenant web application that matches partner service invoices against patient reimbursement invoices using column-level encrypted identity data."]
+    kms["AWS KMS\n[External System]\nManages the master encryption key used for envelope encryption of per-tenant data encryption keys (DEKs)."]
 
-    Person(employee, "Medical Centre Employee", "Uploads partner and patient reimbursement invoices. Reviews automated reconciliation results and flagged discrepancies.")
+    employee -->|"Uploads invoices, reviews reconciliation results\nHTTPS"| claim
+    claim -->|"Unwraps and encrypts tenant DEKs\nHTTPS (AWS SDK)"| kms
 
-    System(claim, "CLAiM", "Multi-tenant web application that matches partner service invoices against patient reimbursement invoices using column-level encrypted identity data.")
-
-    System_Ext(kms, "AWS KMS", "Manages the master encryption key used for envelope encryption of per-tenant data encryption keys (DEKs).")
-
-    Rel(employee, claim, "Uploads invoices, reviews reconciliation results", "HTTPS")
-    Rel(claim, kms, "Unwraps and encrypts tenant DEKs", "HTTPS (AWS SDK)")
+    classDef person fill:#08427B,color:#fff,stroke:#042A4E
+    classDef system fill:#1168BD,color:#fff,stroke:#0B4880
+    classDef external fill:#999999,color:#fff,stroke:#6B6B6B
+    class employee person
+    class claim system
+    class kms external
 ```

@@ -1,18 +1,24 @@
 ```mermaid
-C4Container
-    title Container diagram for CLAiM — Proof of Concept
+flowchart LR
+    employee("Medical Centre Employee\n[Person]\nUploads invoices and reviews reconciliation results.")
+    kms["AWS KMS\n[External System]\nManages the master encryption key for envelope encryption."]
 
-    Person(employee, "Medical Centre Employee", "Uploads invoices and reviews reconciliation results.")
+    subgraph claim["CLAiM"]
+        spring_boot["Web Application\n[Container: Spring Boot + Kotlin, Thymeleaf]\nServer-rendered web UI. Handles username-based JWT authentication, invoice upload and PDF parsing, column-level envelope encryption, HMAC-based invoice matching, and audit logging."]
+        postgres[("Database\n[Container: PostgreSQL on AWS RDS]\nUser-to-tenant mapping in public schema. Encrypted invoice data in per-tenant schemas. Tenant DEKs in tenant_keys table. Append-only audit log with hash chain integrity.")]
+    end
 
-    System_Ext(kms, "AWS KMS", "Manages the master encryption key for envelope encryption.")
+    employee -->|"Uploads invoices, views reconciliation results\nHTTPS"| spring_boot
+    spring_boot -->|"Reads and writes encrypted data, calls audit logging function\nSQL/TCP (SSL)"| postgres
+    spring_boot -->|"Unwraps tenant DEKs on cache miss, encrypts new DEKs during rotation\nHTTPS (AWS SDK)"| kms
 
-    System_Boundary(claim, "CLAiM") {
-        Container(spring_boot, "Web Application", "Spring Boot + Kotlin, Thymeleaf", "Server-rendered web UI. Handles username-based JWT authentication, invoice upload and PDF parsing, column-level envelope encryption, HMAC-based invoice matching, and audit logging.")
-
-        ContainerDb(postgres, "Database", "PostgreSQL on AWS RDS", "Stores user-to-tenant mapping in public schema, encrypted invoice data in per-tenant schemas, tenant DEKs in tenant_keys table, and append-only audit log with hash chain integrity.")
-    }
-
-    Rel(employee, spring_boot, "Uploads invoices, views reconciliation results", "HTTPS")
-    Rel(spring_boot, postgres, "Reads and writes encrypted data, calls audit logging function", "SQL/TCP (SSL)")
-    Rel(spring_boot, kms, "Unwraps tenant DEKs on cache miss, encrypts new DEKs during rotation", "HTTPS (AWS SDK)")
+    classDef person fill:#08427B,color:#fff,stroke:#042A4E
+    classDef external fill:#999999,color:#fff,stroke:#6B6B6B
+    classDef container fill:#438DD5,color:#fff,stroke:#2E6AA8
+    classDef database fill:#438DD5,color:#fff,stroke:#2E6AA8
+    class employee person
+    class kms external
+    class spring_boot container
+    class postgres database
+    style claim fill:#f5f5f5,stroke:#1168BD,color:#1168BD
 ```
