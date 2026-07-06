@@ -7,17 +7,17 @@ C4Component
 
     Container_Boundary(postgres, "Database") {
         Container_Boundary(public_schema, "public schema") {
-            Component(users_table, "users", "Table", "Maps username to tenant_id (schema name). Read-only for app_user. Used during login to resolve tenant and set search_path.")
+            Component(users_table, "users", "Lookup table", "Maps username to tenant_id (schema name). Read-only for app_user. Used during login to resolve tenant and set search_path.")
         }
 
         Container_Boundary(tenant_schema, "tenant schema (one per clinic)", "Schema name = tenant_id from JWT. search_path routes all tenant queries here.") {
-            Component(treatment_table, "treatment_invoices", "Table", "Header: id (UUID), invoice_number, uploaded_at, source_filename.")
-            Component(treatment_lines, "treatment_invoice_lines", "Table", "Lines: invoice_id (FK), isikukood (BYTEA, AES-256-GCM), isikukood_hash (BYTEA, HMAC-SHA256, indexed), procedure_code, amount, treatment_date, key_version.")
-            Component(partner_table, "partner_invoices", "Table", "Header: id (UUID), invoice_number, provider_name, uploaded_at, source_filename.")
-            Component(partner_lines, "partner_invoice_lines", "Table", "Lines: invoice_id (FK), isikukood (BYTEA, AES-256-GCM), isikukood_hash (BYTEA, HMAC-SHA256, indexed), procedure_code, amount, service_date, key_version.")
-            Component(keys_table, "tenant_keys", "Table", "Holds per-tenant DEKs: tenant_id, key_version, encrypted_dek (BYTEA, wrapped via KMS), created_at.")
-            Component(recon_runs, "reconciliation_runs", "Table", "One row per execution: id, triggered_by, run_at, status, summary counts (total_matched, total_amount_mismatch, total_unmatched).")
-            Component(recon_results, "reconciliation_results", "Table", "One row per partner line: id, run_id (FK), partner_invoice_id (FK), partner_invoice_line_id (FK), treatment_invoice_line_id (FK, nullable), match_status, amounts and difference. No personal data.")
+            Component(treatment_table, "treatment_invoices", "Header table", "id (UUID), invoice_number, uploaded_at, source_filename.")
+            Component(treatment_lines, "treatment_invoice_lines", "Line table, indexed, encrypted", "invoice_id (FK), isikukood (BYTEA, AES-256-GCM), isikukood_hash (BYTEA, HMAC-SHA256, indexed), procedure_code, amount, treatment_date, key_version.")
+            Component(partner_table, "partner_invoices", "Header table", "id (UUID), invoice_number, provider_name, uploaded_at, source_filename.")
+            Component(partner_lines, "partner_invoice_lines", "Line table, indexed, encrypted", "invoice_id (FK), isikukood (BYTEA, AES-256-GCM), isikukood_hash (BYTEA, HMAC-SHA256, indexed), procedure_code, amount, service_date, key_version.")
+            Component(keys_table, "tenant_keys", "Key store", "Holds per-tenant DEKs: tenant_id, key_version, encrypted_dek (BYTEA, wrapped via KMS), created_at.")
+            Component(recon_runs, "reconciliation_runs", "Run log", "One row per execution: id, triggered_by, run_at, status, summary counts (total_matched, total_amount_mismatch, total_unmatched).")
+            Component(recon_results, "reconciliation_results", "Result store", "One row per partner line: id, run_id (FK), partner_invoice_id (FK), partner_invoice_line_id (FK), treatment_invoice_line_id (FK, nullable), match_status, amounts and difference. No personal data.")
         }
     }
 
