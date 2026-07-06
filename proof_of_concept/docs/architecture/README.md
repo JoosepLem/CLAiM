@@ -43,8 +43,13 @@ Note: The POC uses username-only authentication (no ID-card). User management is
 
 - [System Context](diagrams/system-context/system-context.md)
 - [Containers](diagrams/containers/containers.md)
-- [Components — Web Application](diagrams/components/spring-boot-app/components.md)
-- [Components — Database](diagrams/components/postgres/components.md)
+- Components — Web Application
+  - [Auth & Tenant Resolution](diagrams/components/spring-boot-app/auth-and-tenant.md)
+  - [Invoice Upload Pipeline](diagrams/components/spring-boot-app/invoice-upload.md)
+  - [Reconciliation](diagrams/components/spring-boot-app/reconciliation.md)
+- Components — Database
+  - [Tenant Data & Invoice Storage](diagrams/components/postgres/tenant-data.md)
+  - [Audit Logging](diagrams/components/postgres/audit-log.md)
 - [Deployment](diagrams/deployment/deployment-poc.md)
 
 ## References

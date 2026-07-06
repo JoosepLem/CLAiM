@@ -1,4 +1,5 @@
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#999999'}}}%%
 C4Context
     title System Context diagram for CLAiM — Proof of Concept
 
