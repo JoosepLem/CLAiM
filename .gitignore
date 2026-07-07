@@ -36,6 +36,16 @@ agentic_development/logs/
 # Environment
 .env
 
+# Terraform (infrastructure-as-code)
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!**/terraform.tfvars.example
+*.tfplan
+*.tfplan.json
+
 # Gradle / Java
 .gradle/
 build/
