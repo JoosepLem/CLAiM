@@ -192,7 +192,7 @@ Already covered in decision 9.
 |---|---|
 | ECS Fargate (0.5 vCPU, 1 GB) | $18 |
 | ALB (hourly + LCUs) | $25 |
-| RDS (db.t3.micro, 20 GB gp3) | $15 |
+| RDS (db.t3.micro, 20 GB gp3, PG 18) | $15 |
 | Secrets Manager (1 secret) | $0.40 |
 | KMS (1 key) | $1 |
 | ECR (minimal storage) | ~$0 |
