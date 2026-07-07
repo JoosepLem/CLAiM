@@ -26,9 +26,28 @@ build/
 venv/
 env/
 
+# Agentic development logs
+agentic_development/logs/
+
 # IDE
 .vscode/
 .idea/
 
 # Environment
 .env
+
+# Gradle / Java
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+*.class
+*.jar
+*.war
+!gradle-wrapper.jar
+bin/
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# Kotlin
+*.kotlin_module
