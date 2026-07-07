@@ -1,0 +1,9 @@
+# CLAiM Staging — Terraform variables
+# Copy this file to terraform.tfvars and fill in your values.
+
+# Your home/public IP in CIDR notation — find it at https://ifconfig.me
+# The /32 suffix means "this exact IP only"
+my_ip = "CHANGE_ME/32"
+
+# Domain name for staging (e.g. test.claimai.ee)
+domain_name = "CHANGE_ME"

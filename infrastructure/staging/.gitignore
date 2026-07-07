@@ -1,0 +1,9 @@
+# Terraform state and working directory
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# tfvars contains sensitive values (IP addresses, etc.)
+*.tfvars
+!terraform.tfvars.example
