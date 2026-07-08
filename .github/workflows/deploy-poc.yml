@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - proof_of_concept/**
+  workflow_dispatch:
 
 env:
   AWS_REGION: eu-north-1
