@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: dev
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:claim}
     username: ${DB_USER:claim}
@@ -6,9 +8,9 @@ spring:
   flyway:
     enabled: true
     schemas: public
-jwt:
-  secret: poc-secret-key-change-me-to-a-very-long-value-at-least-32-bytes
-  expiration-hours: 8
+    url: ${FLYWAY_URL:jdbc:postgresql://localhost:5432/claim}
+    user: ${FLYWAY_USER:claim}
+    password: ${FLYWAY_PASSWORD:claim}
 management:
   endpoints:
     web:

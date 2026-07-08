@@ -1,11 +1,13 @@
 package ee.claimai
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.runApplication
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 class ClaimaiApplication
 
 fun main(args: Array<String>) {

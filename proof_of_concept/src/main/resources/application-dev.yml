@@ -1,0 +1,9 @@
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed
+jwt:
+  secret: poc-secret-key-change-me-to-a-very-long-value-at-least-32-bytes
+  expiration-hours: 8
+app:
+  security:
+    secure-cookie: false
