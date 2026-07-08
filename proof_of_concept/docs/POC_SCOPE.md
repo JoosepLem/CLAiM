@@ -175,9 +175,7 @@ Uploaded PDFs are parsed and discarded — only the extracted relational data is
 | details | JSONB | Extra context |
 | chain_hash | BYTEA | SHA-256(previous_chain_hash \|\| current_entry_data) |
 
-**Audit log placement — primary approach to test:** One cross-tenant log schema with a `SECURITY DEFINER` function (`log_audit_event(...)`) owned by the migration user. The app user has zero `INSERT` on the audit table directly and can only call the function. Hash chain is computed inside the function.
-
-**Alternative approach (noted, not tested unless primary approach is unsatisfactory):** Per-tenant audit table in each tenant schema (2 schemas per clinic: one main, one audit).
+**Audit log placement:** Per-tenant `audit_log` table in each tenant schema. A `SECURITY DEFINER` function (`log_audit_event(...)`) owned by the migration user handles inserts. The app user has zero `INSERT` on the audit table directly and can only call the function. Hash chain is computed inside the function.
 
 ---
 
