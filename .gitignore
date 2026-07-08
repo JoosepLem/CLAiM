@@ -38,7 +38,6 @@ agentic_development/logs/
 
 # Terraform (infrastructure-as-code)
 **/.terraform/
-**/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfvars

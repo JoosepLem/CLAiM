@@ -1,0 +1,161 @@
+name: Terraform
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - infrastructure/**
+  pull_request:
+    paths:
+      - infrastructure/**
+  workflow_dispatch:
+
+concurrency:
+  group: terraform-staging
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-north-1
+  TF_DIR: infrastructure/staging
+  TF_IN_AUTOMATION: true
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    environment:
+      name: staging
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    defaults:
+      run:
+        working-directory: ${{ env.TF_DIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.5"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Detect runner public IP
+        id: ip
+        run: |
+          IP=$(curl -s --max-time 10 https://ifconfig.me)
+          if [ -z "$IP" ]; then
+            IP=$(curl -s --max-time 10 https://api.ipify.org)
+          fi
+          if [ -z "$IP" ]; then
+            echo "Failed to detect runner IP"
+            exit 1
+          fi
+          echo "runner_ip=${IP}/32" >> "$GITHUB_OUTPUT"
+
+      - name: Generate terraform.tfvars
+        run: |
+          cat > terraform.tfvars <<EOF
+          my_ip       = "${{ steps.ip.outputs.runner_ip }}"
+          domain_name = "${{ vars.DOMAIN_NAME }}"
+          EOF
+
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check -diff
+        continue-on-error: true
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: terraform-providers-${{ runner.os }}-${{ hashFiles('infrastructure/staging/.terraform.lock.hcl') }}
+
+      - name: Terraform init
+        run: terraform init -input=false -lockfile=readonly
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        id: plan
+        run: |
+          set +e
+          terraform plan \
+            -input=false \
+            -no-color \
+            -out=plan.tfplan \
+            2>&1 | tee plan.txt
+          EXITCODE=${PIPESTATUS[0]}
+          echo "exitcode=${EXITCODE}" >> "$GITHUB_OUTPUT"
+          if [ "${EXITCODE}" -eq 1 ]; then
+            echo "Terraform plan failed"
+            exit 1
+          fi
+          # exit code 0 = no changes, 2 = changes present (both OK)
+
+      - name: Publish plan to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const cwd = `${process.env.GITHUB_WORKSPACE}/${{ env.TF_DIR }}`;
+            const planPath = `${cwd}/plan.txt`;
+
+            let body = 'No changes. Infrastructure is up to date.';
+            if (fs.existsSync(planPath)) {
+              const plan = fs.readFileSync(planPath, 'utf-8').trim();
+              if (plan) body = plan;
+            }
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.startsWith('## Terraform Plan')
+            );
+
+            const commentBody = `## Terraform Plan\n\n${'```'}hcl\n${body.slice(0, 60000)}\n${'```'}`;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody,
+              });
+            }
+
+      - name: Plan summary
+        if: github.event_name != 'pull_request'
+        run: terraform show -no-color plan.tfplan
+
+      - name: Terraform apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: terraform apply -input=false -auto-approve plan.tfplan
