@@ -28,3 +28,5 @@ END $$;
 GRANT ALL PRIVILEGES ON DATABASE claim TO app_migrator;
 GRANT CREATE, USAGE ON SCHEMA public TO app_migrator;
 GRANT CONNECT ON DATABASE claim TO app_user;
+GRANT USAGE ON SCHEMA public TO app_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_user;
