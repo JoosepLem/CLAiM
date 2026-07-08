@@ -13,6 +13,6 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     END
     \$\$;
     GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO app_migrator;
-    GRANT ALL ON SCHEMA public TO app_migrator;
+    GRANT CREATE, USAGE ON SCHEMA public TO app_migrator;
     GRANT CONNECT ON DATABASE $POSTGRES_DB TO app_user;
 EOSQL
