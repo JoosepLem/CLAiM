@@ -84,6 +84,9 @@ jobs:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: terraform-providers-${{ runner.os }}-${{ hashFiles('infrastructure/staging/.terraform.lock.hcl') }}
 
+      - name: Create plugin cache directory
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
       - name: Terraform init
         run: terraform init -input=false -lockfile=readonly
 
