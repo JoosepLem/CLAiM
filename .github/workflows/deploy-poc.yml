@@ -57,7 +57,7 @@ jobs:
           context: proof_of_concept
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}-${{ github.run_attempt }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           labels: |
@@ -68,7 +68,7 @@ jobs:
       - name: Register new ECS task definition
         id: task
         env:
-          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
 
