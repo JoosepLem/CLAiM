@@ -53,7 +53,7 @@ def _generate_git_diff():
         return None
 
 
-def _probe_implementation(context):
+def _probe_implementation():
     poc = REPO_ROOT / "proof_of_concept"
     sentinel_files = [
         "src/main/kotlin/ee/claimai/auth/AuthController.kt",
@@ -154,12 +154,11 @@ def run_pipeline(agent, plan: str):
 
     original_plan = plan
 
-    context = _parse_result(agent.run("context_builder", plan))
     feedback = []
     consecutive_no_diff = 0
 
     preflight_diff = None
-    if _probe_implementation(context):
+    if _probe_implementation():
         diff = _generate_git_diff()
         if diff:
             _tee(f"  {GREEN}✓ implementation already exists — jumping to review with {len(diff)}-char git diff{RESET}")
@@ -176,7 +175,6 @@ def run_pipeline(agent, plan: str):
         else:
             result = agent.run("implement", {
                 "plan": plan,
-                "context": context,
                 "feedback": feedback,
             })
 

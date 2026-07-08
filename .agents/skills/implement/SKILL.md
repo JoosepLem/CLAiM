@@ -4,22 +4,21 @@ description: "Implement a piece of work based on a plan, with context from conte
 disable-model-invocation: true
 ---
 
-Implement the work described in the plan. You receive the plan, a context object from the context_builder, and optionally a list of blocking feedback from the previous review round. The reviewers (code_quality, performance, tests, security, functional) will check your output against the same dimensions you commit to below.
+Implement the work described in the plan. You receive the plan and optionally a list of blocking feedback from the previous review round. The reviewers (code_quality, performance, tests, security, functional) will check your output against the same dimensions you commit to below.
 
 ## Inputs
 
 - **plan** — the feature spec or PRD to implement
-- **context** — structured codebase context from context_builder (relevant files, conventions, patterns, ADRs)
 - **feedback** — list of blocking issues from the previous review round (empty on first pass); fix these first
 
-## Process: TDD Red → Green
+## Process
 
-Follow the TDD loop from the `tdd` skill. Work in vertical slices — one seam, one test, one minimal implementation per cycle.
-
-1. **Identify seams.** Pick the public interface boundaries you'll test at. Start with the highest-value, highest-risk path first.
-2. **Red.** Write a failing test at the chosen seam. The test must assert real behavior through the public interface, not implementation details.
-3. **Green.** Write only enough code to pass the test. Don't anticipate future tests or add speculative features.
-4. **Repeat.** Move to the next seam. Refactoring belongs to review, not the implementation cycle.
+1. **Read the plan and feedback.** Understand what needs to be built.
+2. **Explore the codebase briefly.** Identify relevant files, conventions, patterns — don't spawn sub-agents, just read directly.
+3. **Implement everything in one pass.** Write all new files and modify all existing files needed. Don't stop to write individual unit tests for each class — the plan's e2e/integration tests are sufficient. Don't run `./gradlew test` after each class.
+4. **Compile once, then fix everything.** Run `./gradlew compileKotlin compileTestKotlin`. Fix ALL compilation errors — both yours and any pre-existing ones that block the build. The project must compile fully before running tests. Then run `./gradlew test` once for the full suite.
+5. **If tests fail, fix and re-run the full suite** — don't run individual test classes.
+6. **Don't add test dependencies** (`spring-security-test`, etc.) unless absolutely required. Prefer simpler test approaches that use what's already available.
 
 ## Quality Bars
 
@@ -52,9 +51,9 @@ Each dimension below maps to a reviewer that will check your output. Write code 
 
 - **Test at seams.** Every test exercises behavior through a public interface. No tests against private methods or internal state.
 - **No tautological tests.** Expected values come from an independent source of truth — a known-good literal, a worked example, the spec. Never recompute the expected value the same way the code does.
-- **Vertical slices only.** One test → one implementation → repeat. Don't batch all tests first.
 - **Cover the plan's acceptance criteria.** Each requirement in the plan should have at least one test that demonstrates it works.
 - **Edge cases have tests.** Known edge cases (empty inputs, boundary values, error paths) get dedicated tests.
+- **Don't write per-class unit tests** unless the plan explicitly asks for them. E2e and integration tests through the public HTTP interface are preferred.
 
 ### 4. Security
 

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: ./dev-loop <plan-file> [--max-iters N] [--model provider/model] [--variant low|medium|high]"
+  echo ""
+  echo "Example: ./dev-loop proof_of_concept/docs/plans/0001-tenant-isolation.md"
+  exit 1
+fi
+
+exec python -m agentic_development.feature_dev.feature_dev_loop --plan "$@"

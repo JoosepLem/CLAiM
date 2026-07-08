@@ -338,6 +338,8 @@ class OpenCodeCLIAgent:
     @staticmethod
     def _extract_json(text: str):
         text = text.strip()
+        text = re.sub(r"^```(?:json)?\s*\n", "", text)
+        text = re.sub(r"\n```\s*$", "", text)
         if text.startswith("{") or text.startswith("["):
             try:
                 return json.loads(text)
