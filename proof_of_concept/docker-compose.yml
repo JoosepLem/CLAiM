@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-claim}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-claim}
+      POSTGRES_DB: ${POSTGRES_DB:-claim}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-claim} -d ${POSTGRES_DB:-claim}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-claim}
+      DB_USER: ${DB_USER:-claim}
+      DB_PASSWORD: ${DB_PASSWORD:-claim}
+
+volumes:
+  pgdata:

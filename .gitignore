@@ -61,3 +61,4 @@ out/
 
 # Kotlin
 *.kotlin_module
+.kotlin/

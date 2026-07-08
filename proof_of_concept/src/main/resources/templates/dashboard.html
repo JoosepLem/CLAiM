@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>CLAiM — Dashboard</title>
+</head>
+<body>
+    <h1>CLAiM Dashboard</h1>
+    <p>Welcome, <span th:text="${username}">user</span> — <span th:text="${clinicName}">Clinic</span></p>
+    <a th:href="${logoutUrl}">Log out</a>
+</body>
+</html>
