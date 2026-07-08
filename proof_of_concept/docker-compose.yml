@@ -14,6 +14,7 @@ services:
       retries: 5
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - /tmp/claim-initdb:/docker-entrypoint-initdb.d
 
   app:
     build: .
@@ -27,8 +28,10 @@ services:
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-claim}
-      DB_USER: ${DB_USER:-claim}
-      DB_PASSWORD: ${DB_PASSWORD:-claim}
+      DB_USER: ${DB_USER:-app_user}
+      DB_PASSWORD: ${DB_PASSWORD:-app_user_pass}
+      FLYWAY_USER: ${FLYWAY_USER:-app_migrator}
+      FLYWAY_PASSWORD: ${FLYWAY_PASSWORD:-app_migrator_pass}
 
 volumes:
   pgdata:
