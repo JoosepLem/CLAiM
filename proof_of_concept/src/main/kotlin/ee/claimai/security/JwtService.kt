@@ -1,18 +1,16 @@
 package ee.claimai.security
 
+import ee.claimai.config.JwtProperties
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.Date
 import javax.crypto.SecretKey
 
 @Service
-class JwtService(
-    @Value("\${jwt.secret}") secret: String,
-    @param:Value("\${jwt.expiration-hours}") private val expirationHours: Long
-) {
-    private val key: SecretKey = Keys.hmacShaKeyFor(secret.toByteArray())
+class JwtService(jwtProperties: JwtProperties) {
+    private val key: SecretKey = Keys.hmacShaKeyFor(jwtProperties.secret.toByteArray())
+    private val expirationHours: Long = jwtProperties.expirationHours
 
     fun generateToken(username: String, tenantId: String): String {
         val now = Date()
