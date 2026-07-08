@@ -1,0 +1,194 @@
+name: Deploy POC to Staging
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - proof_of_concept/**
+
+env:
+  AWS_REGION: eu-north-1
+  ECR_REPOSITORY: claim/staging/app
+  ECS_CLUSTER: claim-staging
+  ECS_SERVICE: claim-staging-app
+  ECS_TASK_FAMILY: claim-staging-app
+  ECS_CONTAINER_NAME: app
+  HEALTH_URL: https://test.claimai.ee/actuator/health
+
+concurrency:
+  group: deploy-poc-staging
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    environment:
+      name: staging
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@062c64072b260d20b6fcb72cdb45bdb98dfc7bb1 # v2.2.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: proof_of_concept
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.run_id }}
+
+      - name: Register new ECS task definition
+        id: task
+        env:
+          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          aws ecs describe-task-definition \
+            --task-definition "${ECS_TASK_FAMILY}" \
+            --query taskDefinition \
+            > task-definition.json
+
+          jq \
+            --arg IMAGE "$IMAGE" \
+            --arg CONTAINER "$ECS_CONTAINER_NAME" \
+            '
+            .containerDefinitions |=
+              map(
+                if .name == $CONTAINER
+                then .image = $IMAGE
+                else .
+                end
+              )
+            | del(
+                .taskDefinitionArn,
+                .revision,
+                .status,
+                .requiresAttributes,
+                .compatibilities,
+                .registeredAt,
+                .registeredBy
+              )
+            ' \
+            task-definition.json > task-definition-updated.json
+
+          TASK_DEFINITION_ARN=$(
+            aws ecs register-task-definition \
+              --cli-input-json file://task-definition-updated.json \
+              --query 'taskDefinition.taskDefinitionArn' \
+              --output text
+          )
+
+          echo "task_definition=${TASK_DEFINITION_ARN}" >> "$GITHUB_OUTPUT"
+
+          rm -f task-definition.json task-definition-updated.json
+
+      - name: Deploy to ECS
+        run: |
+          set -euo pipefail
+
+          aws ecs update-service \
+            --cluster "${ECS_CLUSTER}" \
+            --service "${ECS_SERVICE}" \
+            --task-definition "${{ steps.task.outputs.task_definition }}" \
+            --force-new-deployment
+
+      - name: Wait for deployment to stabilize
+        run: |
+          set -euo pipefail
+
+          aws ecs wait services-stable \
+            --cluster "${ECS_CLUSTER}" \
+            --services "${ECS_SERVICE}"
+
+      - name: Verify deployed task definition
+        run: |
+          set -euo pipefail
+
+          DEPLOYED=$(
+            aws ecs describe-services \
+              --cluster "${ECS_CLUSTER}" \
+              --services "${ECS_SERVICE}" \
+              --query 'services[0].taskDefinition' \
+              --output text
+          )
+
+          EXPECTED="${{ steps.task.outputs.task_definition }}"
+
+          if [ "$DEPLOYED" != "$EXPECTED" ]; then
+            echo "Circuit breaker rolled back to ${DEPLOYED}"
+            echo "Expected: ${EXPECTED}"
+            exit 1
+          fi
+
+          echo "Service running expected revision: ${DEPLOYED}"
+
+      - name: Verify application health
+        run: |
+          set -euo pipefail
+
+          for i in $(seq 1 12); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${HEALTH_URL}")
+            if [ "$STATUS" -eq 200 ]; then
+              echo "Health check passed (HTTP $STATUS)"
+              exit 0
+            fi
+            echo "Attempt $i/12: HTTP $STATUS — retrying in 5s..."
+            sleep 5
+          done
+
+          echo "Health check failed after 12 attempts (60s)"
+          exit 1
+
+      - name: Dump ECS diagnostics on failure
+        if: failure()
+        run: |
+          set +e
+
+          echo "::group::Service"
+          aws ecs describe-services \
+            --cluster "${ECS_CLUSTER}" \
+            --services "${ECS_SERVICE}"
+          echo "::endgroup::"
+
+          echo "::group::Recent tasks"
+          TASKS=$(aws ecs list-tasks \
+            --cluster "${ECS_CLUSTER}" \
+            --service-name "${ECS_SERVICE}" \
+            --desired-status STOPPED \
+            --query 'taskArns' \
+            --output text)
+
+          if [ -n "$TASKS" ]; then
+            aws ecs describe-tasks \
+              --cluster "${ECS_CLUSTER}" \
+              --tasks $TASKS
+          fi
+          echo "::endgroup::"

@@ -79,6 +79,11 @@ resource "aws_ecs_service" "app" {
     container_port   = var.app_port
   }
 
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   depends_on = [
     aws_lb_listener.https
   ]
