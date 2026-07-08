@@ -34,11 +34,14 @@ resource "aws_ecs_task_definition" "app" {
       environment = [
         { name = "DB_NAME", value = var.rds_db_name },
         { name = "DB_PORT", value = "5432" },
+        { name = "SPRING_PROFILES_ACTIVE", value = var.environment },
       ]
       secrets = [
         { name = "DB_USER", valueFrom = "${aws_secretsmanager_secret.app.arn}:DB_USER::" },
         { name = "DB_PASSWORD", valueFrom = "${aws_secretsmanager_secret.app.arn}:DB_PASSWORD::" },
         { name = "DB_HOST", valueFrom = "${aws_secretsmanager_secret.app.arn}:DB_HOST::" },
+        { name = "FLYWAY_USER", valueFrom = "${aws_secretsmanager_secret.app.arn}:FLYWAY_USER::" },
+        { name = "FLYWAY_PASSWORD", valueFrom = "${aws_secretsmanager_secret.app.arn}:FLYWAY_PASSWORD::" },
         { name = "JWT_SECRET", valueFrom = "${aws_secretsmanager_secret.app.arn}:JWT_SECRET::" },
       ]
       logConfiguration = {
