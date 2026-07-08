@@ -1,12 +1,14 @@
 package ee.claimai.unit
 
+import ee.claimai.config.JwtProperties
 import ee.claimai.security.JwtService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class JwtServiceTest {
 
-    private val jwtService = JwtService("test-secret-that-is-at-least-32-bytes-long", 8)
+    private val jwtProperties = JwtProperties(secret = "test-secret-that-is-at-least-32-bytes-long", expirationHours = 8)
+    private val jwtService = JwtService(jwtProperties)
 
     @Test
     fun `generated token contains correct claims`() {
@@ -25,6 +27,9 @@ class JwtServiceTest {
         val claims = jwtService.validateAndExtract(token)
 
         assertThat(claims).isNotNull
+        assertThat(claims!!["sub"]).isEqualTo("valid_user")
+        assertThat(claims["tenant_id"]).isEqualTo("valid_tenant")
+        assertThat(claims["iss"]).isEqualTo("claim-poc")
     }
 
     @Test
@@ -39,7 +44,7 @@ class JwtServiceTest {
 
     @Test
     fun `validation returns null on expired token`() {
-        val expiredService = JwtService("test-secret-that-is-at-least-32-bytes-long", -1)
+        val expiredService = JwtService(JwtProperties(secret = "test-secret-that-is-at-least-32-bytes-long", expirationHours = -1))
         val token = expiredService.generateToken("expired_user", "expired_tenant")
         val claims = jwtService.validateAndExtract(token)
 

@@ -25,6 +25,7 @@ abstract class PostgresTestBase {
             registry.add("spring.datasource.url") { postgres.jdbcUrl }
             registry.add("spring.datasource.username") { postgres.username }
             registry.add("spring.datasource.password") { postgres.password }
+            registry.add("spring.flyway.url") { postgres.jdbcUrl }
             registry.add("spring.flyway.enabled") { "true" }
             registry.add("spring.flyway.schemas") { "public" }
         }

@@ -1,7 +1,11 @@
 package ee.claimai.unit
 
 import ee.claimai.auth.AuthController
+import ee.claimai.config.AppSecurityProperties
+import ee.claimai.invoice.TreatmentInvoiceRepository
 import ee.claimai.security.JwtService
+import ee.claimai.tenant.TenantRepository
+import ee.claimai.user.User
 import ee.claimai.user.UserRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -21,6 +25,8 @@ class LoginRedirectTest {
 
     private val userRepository: UserRepository = mockk()
     private val jwtService: JwtService = mockk()
+    private val treatmentInvoiceRepository: TreatmentInvoiceRepository = mockk()
+    private val tenantRepository: TenantRepository = mockk()
 
     private val dummyView = object : View {
         override fun render(model: MutableMap<String, *>?, request: jakarta.servlet.http.HttpServletRequest, response: jakarta.servlet.http.HttpServletResponse) {
@@ -38,7 +44,7 @@ class LoginRedirectTest {
     }
 
     private val mockMvc = MockMvcBuilders
-        .standaloneSetup(AuthController(userRepository, jwtService))
+        .standaloneSetup(AuthController(userRepository, jwtService, AppSecurityProperties(secureCookie = false), treatmentInvoiceRepository, tenantRepository))
         .setViewResolvers(viewResolver)
         .build()
 
@@ -60,7 +66,7 @@ class LoginRedirectTest {
 
     @Test
     fun `POST login with valid username sets JWT cookie and redirects to dashboard`() {
-        every { userRepository.findByUsername("user_a") } returns mapOf("username" to "user_a", "tenant_id" to "tenant_a")
+        every { userRepository.findByUsername("user_a") } returns User(username = "user_a", tenantId = "tenant_a")
         every { jwtService.generateToken("user_a", "tenant_a") } returns "test.jwt.token"
 
         mockMvc.perform(post("/login").param("username", "user_a"))

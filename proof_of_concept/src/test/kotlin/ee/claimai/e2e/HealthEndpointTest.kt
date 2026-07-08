@@ -1,29 +1,34 @@
 package ee.claimai.e2e
 
 import ee.claimai.support.PostgresTestBase
-import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.web.server.LocalServerPort
-import org.springframework.http.HttpStatus
-import org.springframework.web.client.RestTemplate
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.setup.MockMvcBuilders
+import org.springframework.web.context.WebApplicationContext
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 class HealthEndpointTest : PostgresTestBase() {
 
-    @LocalServerPort
-    private var port: Int = 0
+    @Autowired
+    private lateinit var context: WebApplicationContext
 
-    private val restTemplate = RestTemplate()
+    private lateinit var mockMvc: MockMvc
+
+    @BeforeEach
+    fun setup() {
+        mockMvc = MockMvcBuilders.webAppContextSetup(context).build()
+    }
 
     @Test
     fun `GET actuator health returns UP with DB component`() {
-        val response = restTemplate.getForEntity("http://localhost:$port/actuator/health", Map::class.java)
-
-        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.body as Map<String, Any>
-        assertThat(body["status"]).isEqualTo("UP")
+        mockMvc.perform(get("/actuator/health"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("UP"))
     }
 }
