@@ -2,10 +2,41 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>CLAiM — Dashboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #1a1a2e; }
+        .clinic { color: #4a4a6a; font-size: 1.1em; margin-bottom: 24px; }
+        .logout { display: inline-block; margin-bottom: 24px; color: #e74c3c; text-decoration: none; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f5f5f5; font-weight: 600; color: #333; }
+        tr:hover { background: #fafafa; }
+        .empty { color: #999; font-style: italic; padding: 20px 0; }
+        .tenant-label { background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; }
+    </style>
 </head>
 <body>
     <h1>CLAiM Dashboard</h1>
-    <p>Welcome, <span th:text="${username}">user</span> — <span th:text="${clinicName}">Clinic</span></p>
-    <a th:href="${logoutUrl}">Log out</a>
+    <p class="clinic">Welcome, <strong th:text="${username}">user</strong> — <span class="tenant-label" th:text="${clinicName}">Clinic</span></p>
+    <a class="logout" th:href="${logoutUrl}">Log out</a>
+
+    <h2>Treatment Invoices</h2>
+    <div th:if="${#lists.isEmpty(invoices)}" class="empty">No invoices found for this tenant.</div>
+    <table th:unless="${#lists.isEmpty(invoices)}">
+        <thead>
+            <tr>
+                <th>Invoice #</th>
+                <th>Source</th>
+                <th>Uploaded</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="invoice : ${invoices}">
+                <td th:text="${invoice.invoiceNumber ?: '—'}">INV-001</td>
+                <td th:text="${invoice.sourceFilename ?: '—'}">file.pdf</td>
+                <td th:text="${#temporals.format(invoice.uploadedAt, 'yyyy-MM-dd HH:mm')}">2025-01-15 10:30</td>
+            </tr>
+        </tbody>
+    </table>
 </body>
 </html>
