@@ -17,6 +17,8 @@ class SecurityConfig(
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { it.disable() }
+            .formLogin { it.disable() }
+            .httpBasic { it.disable() }
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/login", "/logout", "/", "/actuator/health", "/error").permitAll()
