@@ -3,12 +3,14 @@ package ee.claimai.security
 import ee.claimai.config.JwtProperties
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.Date
 import javax.crypto.SecretKey
 
 @Service
 class JwtService(jwtProperties: JwtProperties) {
+    private val log = LoggerFactory.getLogger(JwtService::class.java)
     private val key: SecretKey = Keys.hmacShaKeyFor(jwtProperties.secret.toByteArray())
     private val expirationHours: Long = jwtProperties.expirationHours
 
@@ -53,6 +55,7 @@ class JwtService(jwtProperties: JwtProperties) {
 
             result
         } catch (e: Exception) {
+            log.warn("JWT validation failed: {}", e.message)
             null
         }
     }

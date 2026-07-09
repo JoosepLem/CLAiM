@@ -17,6 +17,13 @@ app:
       password: ${FLYWAY_PASSWORD:claim}
       maximum-pool-size: 2
 
+logging:
+  level:
+    ee.claimai: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.springframework.jdbc: WARN
+
 management:
   endpoints:
     web:

@@ -4,6 +4,7 @@ import ee.claimai.tenant.TenantContext
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
@@ -14,6 +15,8 @@ import org.springframework.web.filter.OncePerRequestFilter
 class JwtAuthenticationFilter(
     private val jwtService: JwtService
 ) : OncePerRequestFilter() {
+
+    private val log = LoggerFactory.getLogger(JwtAuthenticationFilter::class.java)
 
     companion object {
         private val PUBLIC_PATHS = setOf("/login", "/logout", "/", "/actuator/health", "/error")
@@ -31,17 +34,20 @@ class JwtAuthenticationFilter(
 
         val token = request.cookies?.find { it.name == "jwt" }?.value
         if (token == null) {
+            log.warn("Missing JWT cookie for {} {}", request.method, request.requestURI)
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing JWT")
             return
         }
 
         val claims = jwtService.validateAndExtract(token)
         if (claims == null) {
+            log.warn("Invalid or expired JWT for {} {}", request.method, request.requestURI)
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired JWT")
             return
         }
 
         val username = claims["sub"] as? String ?: run {
+            log.warn("Missing subject in JWT for {} {}", request.method, request.requestURI)
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing subject in JWT")
             return
         }
