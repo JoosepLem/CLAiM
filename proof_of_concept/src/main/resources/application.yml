@@ -5,7 +5,7 @@ spring:
     hikari:
       jdbc-url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:claim}
       username: ${DB_USER:app_user}
-      password: ${DB_PASSWORD:claim}
+      password: ${DB_PASSWORD:app_user_pass}
   flyway:
     enabled: false
 

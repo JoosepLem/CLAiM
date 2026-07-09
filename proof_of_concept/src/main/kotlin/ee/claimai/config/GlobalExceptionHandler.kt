@@ -8,6 +8,8 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.context.request.WebRequest
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.net.URI
 
 @ControllerAdvice
@@ -18,40 +20,41 @@ class GlobalExceptionHandler {
     @ExceptionHandler(NoSuchElementException::class)
     fun handleNotFound(ex: NoSuchElementException, request: WebRequest): ResponseEntity<ProblemDetail> {
         log.warn("Resource not found: {}", ex.message, ex)
-        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.message ?: "Resource not found")
-        problem.instance = URI.create(request.getDescription(false).removePrefix("uri="))
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem)
+        return buildError(ex, HttpStatus.NOT_FOUND, ex.message ?: "Resource not found", request)
     }
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleBadRequest(ex: IllegalArgumentException, request: WebRequest): ResponseEntity<ProblemDetail> {
         log.warn("Bad request: {}", ex.message, ex)
-        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.message ?: "Bad request")
-        problem.instance = URI.create(request.getDescription(false).removePrefix("uri="))
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem)
+        return buildError(ex, HttpStatus.BAD_REQUEST, ex.message ?: "Bad request", request)
     }
 
     @ExceptionHandler(IllegalStateException::class)
     fun handleInternalError(ex: IllegalStateException, request: WebRequest): ResponseEntity<ProblemDetail> {
         log.error("Internal state error: {}", ex.message, ex)
-        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error")
-        problem.instance = URI.create(request.getDescription(false).removePrefix("uri="))
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem)
+        return buildError(ex, HttpStatus.INTERNAL_SERVER_ERROR, ex.message ?: "Internal server error", request)
     }
 
     @ExceptionHandler(AccessDeniedException::class)
     fun handleAccessDenied(ex: AccessDeniedException, request: WebRequest): ResponseEntity<ProblemDetail> {
         log.warn("Access denied: {}", ex.message, ex)
-        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Access denied")
-        problem.instance = URI.create(request.getDescription(false).removePrefix("uri="))
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem)
+        return buildError(ex, HttpStatus.FORBIDDEN, "Access denied", request)
     }
 
     @ExceptionHandler(Exception::class)
     fun handleAll(ex: Exception, request: WebRequest): ResponseEntity<ProblemDetail> {
         log.error("Unhandled exception for {}: {}", request.getDescription(false), ex.message, ex)
-        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error")
+        return buildError(ex, HttpStatus.INTERNAL_SERVER_ERROR, ex.message ?: "Internal server error", request)
+    }
+
+    private fun buildError(ex: Exception, status: HttpStatus, detail: String, request: WebRequest): ResponseEntity<ProblemDetail> {
+        val problem = ProblemDetail.forStatusAndDetail(status, detail)
         problem.instance = URI.create(request.getDescription(false).removePrefix("uri="))
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem)
+        problem.setProperty("exception", ex.javaClass.name)
+        problem.setProperty("message", ex.message)
+        val sw = StringWriter()
+        ex.printStackTrace(PrintWriter(sw))
+        problem.setProperty("stackTrace", sw.toString())
+        return ResponseEntity.status(status).body(problem)
     }
 }
