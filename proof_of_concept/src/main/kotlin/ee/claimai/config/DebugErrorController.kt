@@ -1,13 +1,12 @@
 package ee.claimai.config
 
 import jakarta.servlet.http.HttpServletRequest
-import org.springframework.boot.web.servlet.error.ErrorController
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 
 @Controller
-class DebugErrorController : ErrorController {
+class DebugErrorController {
 
     @RequestMapping("/error")
     @ResponseBody
@@ -18,17 +17,16 @@ class DebugErrorController : ErrorController {
         val path = request.getAttribute("jakarta.servlet.error.request_uri") ?: "N/A"
 
         val stackTrace = (exception as? Throwable)?.let {
-            it.stackTrace.joinToString("\n") { "  at ${it.className}.${it.methodName}(${it.fileName}:${it.lineNumber})" }
+            it.stackTrace.joinToString("<br>") { "&nbsp;&nbsp;at ${it.className}.${it.methodName}(${it.fileName}:${it.lineNumber})" }
         } ?: "N/A"
 
         return """
-            Status: $status
-            Path: $path
-            Exception: ${(exception as? Throwable)?.javaClass?.name ?: exception}
-            Message: $message
-            
-            Stack trace:
-            $stackTrace
+            <h2>Status: $status</h2>
+            <p><b>Path:</b> $path</p>
+            <p><b>Exception:</b> ${(exception as? Throwable)?.javaClass?.name ?: exception}</p>
+            <p><b>Message:</b> $message</p>
+            <h3>Stack trace:</h3>
+            <pre style="font-size:12px;">$stackTrace</pre>
         """.trimIndent()
     }
 }
