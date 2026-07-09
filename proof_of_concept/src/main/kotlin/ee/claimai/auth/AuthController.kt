@@ -14,9 +14,6 @@ import org.springframework.web.bind.annotation.CookieValue
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.ResponseBody
-import java.io.PrintWriter
-import java.io.StringWriter
 
 @Controller
 class AuthController(
@@ -42,23 +39,6 @@ class AuthController(
             .build()
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString())
         return if (user.role == "ADMIN") "redirect:/admin" else "redirect:/dashboard"
-    }
-
-    @GetMapping("/login-debug")
-    @ResponseBody
-    fun loginDebug(@RequestParam username: String, response: HttpServletResponse): String {
-        return try {
-            val user = userRepository.findByUsername(username)
-            if (user == null) {
-                "User '$username' NOT FOUND in database"
-            } else {
-                "User found: id=${user.id}, username=${user.username}, tenantId=${user.tenantId}, role=${user.role}"
-            }
-        } catch (e: Exception) {
-            val sw = StringWriter()
-            e.printStackTrace(PrintWriter(sw))
-            "ERROR looking up '$username':\n${sw}"
-        }
     }
 
     @GetMapping("/dashboard")
