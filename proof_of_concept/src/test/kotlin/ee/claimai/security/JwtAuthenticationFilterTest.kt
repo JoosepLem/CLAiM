@@ -54,7 +54,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     fun `valid JWT sets tenant context and authentication`() {
-        val token = jwtService.generateToken("testuser", "tenant_x")
+        val token = jwtService.generateToken("testuser", "tenant_x", "CLINIC_EMPLOYEE")
         val request = MockHttpServletRequest("GET", "/api/invoices")
         request.setCookies(jakarta.servlet.http.Cookie("jwt", token))
         val response = MockHttpServletResponse()
@@ -77,7 +77,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     fun `invalid JWT returns 401`() {
-        val token = jwtService.generateToken("user", "tenant")
+        val token = jwtService.generateToken("user", "tenant", "CLINIC_EMPLOYEE")
         val tampered = token.dropLast(1) + "X"
         val request = MockHttpServletRequest("GET", "/dashboard")
         request.setCookies(jakarta.servlet.http.Cookie("jwt", tampered))
@@ -91,7 +91,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     fun `tenant context is cleared after request`() {
-        val token = jwtService.generateToken("user", "tenant_x")
+        val token = jwtService.generateToken("user", "tenant_x", "CLINIC_EMPLOYEE")
         val request = MockHttpServletRequest("GET", "/dashboard")
         request.setCookies(jakarta.servlet.http.Cookie("jwt", token))
         val response = MockHttpServletResponse()
@@ -105,7 +105,7 @@ class JwtAuthenticationFilterTest {
     @Test
     fun `expired JWT returns 401`() {
         val expiredService = JwtService(JwtProperties(secret = "test-secret-that-is-at-least-32-bytes-long-for-filter-tests", expirationHours = -1))
-        val token = expiredService.generateToken("user", "tenant")
+        val token = expiredService.generateToken("user", "tenant", "CLINIC_EMPLOYEE")
         val expiredFilter = JwtAuthenticationFilter(jwtService)
         val request = MockHttpServletRequest("GET", "/dashboard")
         request.setCookies(jakarta.servlet.http.Cookie("jwt", token))
@@ -115,5 +115,22 @@ class JwtAuthenticationFilterTest {
         expiredFilter.doFilter(request, response, chain)
 
         assertThat(response.status).isEqualTo(401)
+    }
+
+    @Test
+    fun `admin JWT does not set tenant context`() {
+        val token = jwtService.generateToken("admin", null, "ADMIN")
+        val request = MockHttpServletRequest("GET", "/admin")
+        request.setCookies(jakarta.servlet.http.Cookie("jwt", token))
+        val response = MockHttpServletResponse()
+        var tenantDuringChain: String? = null
+        val chain = FilterChain { _, _ ->
+            tenantDuringChain = TenantContext.get()
+        }
+
+        filter.doFilter(request, response, chain)
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(tenantDuringChain).isNull()
     }
 }

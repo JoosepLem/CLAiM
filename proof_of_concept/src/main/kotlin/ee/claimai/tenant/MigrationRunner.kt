@@ -6,7 +6,7 @@ import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 
 @Component
-@Order(2)
+@Order(1)
 class MigrationRunner(
     private val migrations: TenantMigrationService
 ) : ApplicationRunner {

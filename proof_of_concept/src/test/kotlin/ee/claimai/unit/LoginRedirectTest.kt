@@ -66,8 +66,8 @@ class LoginRedirectTest {
 
     @Test
     fun `POST login with valid username sets JWT cookie and redirects to dashboard`() {
-        every { userRepository.findByUsername("user_a") } returns User(username = "user_a", tenantId = "tenant_a")
-        every { jwtService.generateToken("user_a", "tenant_a") } returns "test.jwt.token"
+        every { userRepository.findByUsername("user_a") } returns User(username = "user_a", tenantId = "tenant_a", role = "CLINIC_EMPLOYEE")
+        every { jwtService.generateToken("user_a", "tenant_a", "CLINIC_EMPLOYEE") } returns "test.jwt.token"
 
         mockMvc.perform(post("/login").param("username", "user_a"))
             .andExpect(status().is3xxRedirection)

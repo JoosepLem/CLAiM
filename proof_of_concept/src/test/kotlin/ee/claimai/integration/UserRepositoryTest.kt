@@ -3,15 +3,23 @@ package ee.claimai.integration
 import ee.claimai.support.PostgresTestBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import java.util.UUID
 
 @SpringBootTest
 class UserRepositoryTest : PostgresTestBase() {
 
-    @Autowired
-    private lateinit var jdbcTemplate: JdbcTemplate
+    companion object {
+        private val suffix = "t" + UUID.randomUUID().toString().replace("-", "").take(11)
+
+        @JvmStatic
+        @DynamicPropertySource
+        fun registerTenantSuffix(registry: DynamicPropertyRegistry) {
+            registry.add("test.tenant.suffix") { suffix }
+        }
+    }
 
     @Test
     fun `insert and query user row`() {

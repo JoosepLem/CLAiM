@@ -12,7 +12,7 @@ class JwtServiceTest {
 
     @Test
     fun `generated token contains correct claims`() {
-        val token = jwtService.generateToken("testuser", "tenant_x")
+        val token = jwtService.generateToken("testuser", "tenant_x", "CLINIC_EMPLOYEE")
         val claims = jwtService.validateAndExtract(token)
 
         assertThat(claims).isNotNull
@@ -23,7 +23,7 @@ class JwtServiceTest {
 
     @Test
     fun `validation succeeds on valid token`() {
-        val token = jwtService.generateToken("valid_user", "valid_tenant")
+        val token = jwtService.generateToken("valid_user", "valid_tenant", "CLINIC_EMPLOYEE")
         val claims = jwtService.validateAndExtract(token)
 
         assertThat(claims).isNotNull
@@ -34,7 +34,7 @@ class JwtServiceTest {
 
     @Test
     fun `validation returns null on tampered token`() {
-        val token = jwtService.generateToken("valid_user", "valid_tenant")
+        val token = jwtService.generateToken("valid_user", "valid_tenant", "CLINIC_EMPLOYEE")
         val tampered = token.dropLast(1) + "X"
 
         val claims = jwtService.validateAndExtract(tampered)
@@ -45,7 +45,7 @@ class JwtServiceTest {
     @Test
     fun `validation returns null on expired token`() {
         val expiredService = JwtService(JwtProperties(secret = "test-secret-that-is-at-least-32-bytes-long", expirationHours = -1))
-        val token = expiredService.generateToken("expired_user", "expired_tenant")
+        val token = expiredService.generateToken("expired_user", "expired_tenant", "CLINIC_EMPLOYEE")
         val claims = jwtService.validateAndExtract(token)
 
         assertThat(claims).isNull()
