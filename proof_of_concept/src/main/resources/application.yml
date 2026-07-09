@@ -13,8 +13,8 @@ app:
   datasource:
     migration:
       jdbc-url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:claim}
-      username: ${MIGRATION_DB_USER:app_migrator}
-      password: ${MIGRATION_DB_PASSWORD:claim}
+      username: ${FLYWAY_USER:app_migrator}
+      password: ${FLYWAY_PASSWORD:claim}
       maximum-pool-size: 2
 
 management:

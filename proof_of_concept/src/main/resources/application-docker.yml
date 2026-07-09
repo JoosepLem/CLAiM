@@ -7,8 +7,8 @@ app:
   datasource:
     migration:
       jdbc-url: jdbc:postgresql://postgres:5432/claim
-      username: ${MIGRATION_DB_USER:claim}
-      password: ${MIGRATION_DB_PASSWORD:claim}
+      username: ${FLYWAY_USER:claim}
+      password: ${FLYWAY_PASSWORD:claim}
   security:
     secure-cookie: false
 

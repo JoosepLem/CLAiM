@@ -6,5 +6,5 @@ app:
     secure-cookie: false
   datasource:
     migration:
-      username: ${MIGRATION_DB_USER:claim}
-      password: ${MIGRATION_DB_PASSWORD:claim}
+      username: ${FLYWAY_USER:claim}
+      password: ${FLYWAY_PASSWORD:claim}
