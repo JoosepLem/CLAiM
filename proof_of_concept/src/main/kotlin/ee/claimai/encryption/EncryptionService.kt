@@ -7,7 +7,6 @@ import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
 
 @Service
 class EncryptionService(
@@ -17,23 +16,21 @@ class EncryptionService(
     data class EncryptedData(val ciphertext: ByteArray, val hmac: ByteArray)
 
     fun encrypt(tenantId: String, plaintext: String): EncryptedData {
-        val dek = dekCache.get(tenantId)
-        val keys = Hkdf.deriveKeys(dek)
+        val keys = dekCache.get(tenantId)
         val ciphertext = aesGcmEncrypt(plaintext, keys.encryptionKey)
         val hmac = computeHmac(plaintext, keys.hmacKey)
         return EncryptedData(ciphertext, hmac)
     }
 
     fun decrypt(tenantId: String, ciphertext: ByteArray, keyVersion: Int): String {
-        val dek = dekCache.get(tenantId)
-        val keys = Hkdf.deriveKeys(dek)
+        val keys = dekCache.get(tenantId)
         return aesGcmDecrypt(ciphertext, keys.encryptionKey)
     }
 
     private fun aesGcmEncrypt(plaintext: String, key: SecretKey): ByteArray {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
         val ct = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
         return iv + ct
@@ -55,5 +52,6 @@ class EncryptionService(
 
     companion object {
         private val log = LoggerFactory.getLogger(EncryptionService::class.java)
+        private val secureRandom = SecureRandom()
     }
 }

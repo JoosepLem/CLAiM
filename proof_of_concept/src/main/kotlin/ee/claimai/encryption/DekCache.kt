@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.LoadingCache
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.Duration
-import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
 
 @Component
@@ -14,22 +13,20 @@ class DekCache(
     ttl: Duration = Duration.ofMinutes(30)
 ) {
 
-    private val cache: LoadingCache<String, KeyManagementService.DekWithVersion> = Caffeine.newBuilder()
+    private val cache: LoadingCache<String, Hkdf.DerivedKeys> = Caffeine.newBuilder()
         .expireAfterWrite(ttl)
-        .build { tenantId -> keyManagementService.getOrCreateDek(tenantId) }
+        .build { tenantId ->
+            val dek = keyManagementService.getOrCreateDek(tenantId)
+            Hkdf.deriveKeys(SecretKeySpec(dek.rawDek, "AES"))
+        }
 
-    fun get(tenantId: String): SecretKey {
+    fun get(tenantId: String): Hkdf.DerivedKeys {
         val cached = cache.getIfPresent(tenantId)
         if (cached != null) {
             log.debug("dek_cache hit tenant={}", tenantId)
-            return SecretKeySpec(cached.rawDek, "AES")
+            return cached
         }
         log.info("dek_cache miss tenant={} action=reload", tenantId)
-        val dek = cache.get(tenantId)
-        return SecretKeySpec(dek.rawDek, "AES")
-    }
-
-    fun getWithVersion(tenantId: String): KeyManagementService.DekWithVersion {
         return cache.get(tenantId)
     }
 

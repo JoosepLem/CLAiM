@@ -2,6 +2,7 @@ package ee.claimai.unit
 
 import ee.claimai.encryption.DekCache
 import ee.claimai.encryption.EncryptionService
+import ee.claimai.encryption.Hkdf
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
@@ -12,12 +13,13 @@ import javax.crypto.spec.SecretKeySpec
 class HmacMatchingTest {
 
     private val dek = SecretKeySpec(ByteArray(32) { it.toByte() }, "AES")
+    private val derivedKeys = Hkdf.deriveKeys(dek)
     private val mockCache = mockk<DekCache>()
     private val service = EncryptionService(mockCache)
 
     @BeforeEach
     fun setUp() {
-        every { mockCache.get(any()) } returns dek
+        every { mockCache.get(any()) } returns derivedKeys
     }
 
     @Test
@@ -41,10 +43,10 @@ class HmacMatchingTest {
         val tenantADek = SecretKeySpec(ByteArray(32) { it.toByte() }, "AES")
         val tenantBDek = SecretKeySpec(ByteArray(32) { (it + 1).toByte() }, "AES")
 
-        every { mockCache.get("tenant_a") } returns tenantADek
+        every { mockCache.get("tenant_a") } returns Hkdf.deriveKeys(tenantADek)
         val r1 = service.encrypt("tenant_a", plaintext)
 
-        every { mockCache.get("tenant_b") } returns tenantBDek
+        every { mockCache.get("tenant_b") } returns Hkdf.deriveKeys(tenantBDek)
         val r2 = service.encrypt("tenant_b", plaintext)
 
         assertThat(r1.hmac).isNotEqualTo(r2.hmac)

@@ -1,6 +1,7 @@
 package ee.claimai.unit
 
 import ee.claimai.encryption.DekCache
+import ee.claimai.encryption.Hkdf
 import ee.claimai.encryption.KeyManagementService
 import io.mockk.every
 import io.mockk.mockk
@@ -8,6 +9,7 @@ import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Duration
+import javax.crypto.spec.SecretKeySpec
 
 class DekCacheEvictionTest {
 
@@ -23,8 +25,9 @@ class DekCacheEvictionTest {
         val first = cache.get("tenant_a")
         val second = cache.get("tenant_a")
 
-        assertThat(first.encoded).isEqualTo(rawDek)
-        assertThat(second.encoded).isEqualTo(rawDek)
+        val expected = Hkdf.deriveKeys(SecretKeySpec(rawDek, "AES"))
+        assertThat(first.encryptionKey.encoded).isEqualTo(expected.encryptionKey.encoded)
+        assertThat(second.encryptionKey.encoded).isEqualTo(expected.encryptionKey.encoded)
         verify(exactly = 1) { mockKms.getOrCreateDek("tenant_a") }
     }
 
@@ -40,8 +43,10 @@ class DekCacheEvictionTest {
         cache.evict("tenant_a")
         val second = cache.get("tenant_a")
 
-        assertThat(first.encoded).isEqualTo(rawDek1)
-        assertThat(second.encoded).isEqualTo(rawDek2)
+        val expected1 = Hkdf.deriveKeys(SecretKeySpec(rawDek1, "AES"))
+        val expected2 = Hkdf.deriveKeys(SecretKeySpec(rawDek2, "AES"))
+        assertThat(first.encryptionKey.encoded).isEqualTo(expected1.encryptionKey.encoded)
+        assertThat(second.encryptionKey.encoded).isEqualTo(expected2.encryptionKey.encoded)
         verify(exactly = 2) { mockKms.getOrCreateDek("tenant_a") }
     }
 

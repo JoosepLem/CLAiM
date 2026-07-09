@@ -2,6 +2,7 @@ package ee.claimai.unit
 
 import ee.claimai.encryption.DekCache
 import ee.claimai.encryption.EncryptionService
+import ee.claimai.encryption.Hkdf
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
@@ -14,12 +15,13 @@ import javax.crypto.spec.SecretKeySpec
 class EncryptionServiceTest {
 
     private val dek = SecretKeySpec(ByteArray(32) { it.toByte() }, "AES")
+    private val derivedKeys = Hkdf.deriveKeys(dek)
     private val mockCache = mockk<DekCache>()
     private val service = EncryptionService(mockCache)
 
     @BeforeEach
     fun setUp() {
-        every { mockCache.get(any()) } returns dek
+        every { mockCache.get(any()) } returns derivedKeys
     }
 
     @Test
@@ -44,7 +46,7 @@ class EncryptionServiceTest {
     fun `TC6 wrong DEK cannot decrypt due to GCM authentication tag mismatch`() {
         val data = service.encrypt("tenant_a", "47101010033")
         val wrongDek = SecretKeySpec(ByteArray(32) { (it + 1).toByte() }, "AES")
-        every { mockCache.get("tenant_a") } returns wrongDek
+        every { mockCache.get("tenant_a") } returns Hkdf.deriveKeys(wrongDek)
 
         assertThatThrownBy {
             service.decrypt("tenant_a", data.ciphertext, 1)
