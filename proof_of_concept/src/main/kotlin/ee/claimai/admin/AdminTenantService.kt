@@ -20,6 +20,9 @@ class AdminTenantService(
         val tenant = tenantRepository.save(Tenant(tenantId = tenantId, name = name, active = true))
         jdbcTemplate.execute("CREATE SCHEMA \"$tenantId\"")
         tenantMigrationService.migrateTenant(tenantId)
+        jdbcTemplate.execute("GRANT USAGE ON SCHEMA \"$tenantId\" TO app_user")
+        jdbcTemplate.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA \"$tenantId\" TO app_user")
+        jdbcTemplate.execute("ALTER DEFAULT PRIVILEGES FOR ROLE app_migrator IN SCHEMA \"$tenantId\" GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user")
         return tenant
     }
 
