@@ -16,7 +16,7 @@ class JwtAuthenticationFilter(
 ) : OncePerRequestFilter() {
 
     companion object {
-        private val PUBLIC_PATHS = setOf("/login", "/logout", "/", "/actuator/health", "/error")
+        private val PUBLIC_PATHS = setOf("/login", "/login-debug", "/logout", "/", "/actuator/health", "/error")
     }
 
     override fun doFilterInternal(
