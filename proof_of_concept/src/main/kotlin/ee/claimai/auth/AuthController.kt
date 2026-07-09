@@ -30,7 +30,7 @@ class AuthController(
     @PostMapping("/login")
     fun login(@RequestParam username: String, response: HttpServletResponse): String {
         val user = userRepository.findByUsername(username) ?: return "login"
-        val token = jwtService.generateToken(username, user.tenantId)
+        val token = jwtService.generateToken(username, user.tenantId, user.role)
         val cookie = ResponseCookie.from("jwt", token)
             .httpOnly(true)
             .sameSite("Strict")
@@ -38,7 +38,7 @@ class AuthController(
             .path("/")
             .build()
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString())
-        return "redirect:/dashboard"
+        return if (user.role == "ADMIN") "redirect:/admin" else "redirect:/dashboard"
     }
 
     @GetMapping("/dashboard")
@@ -49,7 +49,7 @@ class AuthController(
         if (token == null) return "redirect:/login"
         val claims = jwtService.validateAndExtract(token) ?: return "redirect:/login"
         val username = claims["sub"] as String
-        val tenantId = claims["tenant_id"] as String
+        val tenantId = claims["tenant_id"] as? String ?: return "redirect:/admin"
         val invoices = treatmentInvoiceRepository.findAllByOrderByUploadedAtDesc()
         model.addAttribute("username", username)
         val tenant = tenantRepository.findByTenantId(tenantId)

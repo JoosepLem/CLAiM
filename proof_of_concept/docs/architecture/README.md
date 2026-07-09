@@ -52,6 +52,10 @@ Note: The POC uses username-only authentication (no ID-card). User management is
   - [Audit Logging](diagrams/components/postgres/audit-log.md)
 - [Deployment](diagrams/deployment/deployment-poc.md)
 
+## Testing
+
+- [Testing Architecture](testing-architecture.md)
+
 ## References
 
 - [POC Scope Document](../POC_SCOPE.md)

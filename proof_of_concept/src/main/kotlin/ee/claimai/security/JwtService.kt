@@ -12,18 +12,22 @@ class JwtService(jwtProperties: JwtProperties) {
     private val key: SecretKey = Keys.hmacShaKeyFor(jwtProperties.secret.toByteArray())
     private val expirationHours: Long = jwtProperties.expirationHours
 
-    fun generateToken(username: String, tenantId: String): String {
+    fun generateToken(username: String, tenantId: String?, role: String): String {
         val now = Date()
         val expiry = Date(now.time + expirationHours * 3600 * 1000)
 
-        return Jwts.builder()
+        val builder = Jwts.builder()
             .subject(username)
-            .claim("tenant_id", tenantId)
+            .claim("authorities", listOf("ROLE_$role"))
             .issuer("claim-poc")
             .issuedAt(now)
             .expiration(expiry)
-            .signWith(key)
-            .compact()
+
+        if (tenantId != null) {
+            builder.claim("tenant_id", tenantId)
+        }
+
+        return builder.signWith(key).compact()
     }
 
     fun validateAndExtract(token: String): Map<String, Any>? {
@@ -34,11 +38,20 @@ class JwtService(jwtProperties: JwtProperties) {
                 .parseSignedClaims(token)
                 .payload
 
-            mapOf(
+            val authorities = claims["authorities"] as? List<*> ?: emptyList<Any>()
+
+            val result = mutableMapOf<String, Any>(
                 "sub" to (claims.subject ?: return null),
-                "tenant_id" to (claims["tenant_id"] ?: return null),
-                "iss" to (claims.issuer ?: return null)
+                "iss" to (claims.issuer ?: return null),
+                "authorities" to authorities.filterIsInstance<String>()
             )
+
+            val tenantId = claims["tenant_id"] as? String
+            if (tenantId != null) {
+                result["tenant_id"] = tenantId
+            }
+
+            result
         } catch (e: Exception) {
             null
         }

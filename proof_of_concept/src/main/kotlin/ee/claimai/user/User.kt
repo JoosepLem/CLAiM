@@ -7,5 +7,6 @@ import org.springframework.data.relational.core.mapping.Table
 data class User(
     @Id val id: Long = 0,
     val username: String,
-    val tenantId: String
+    val tenantId: String? = null,
+    val role: String = "CLINIC_EMPLOYEE"
 )

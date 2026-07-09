@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
@@ -44,14 +45,19 @@ class JwtAuthenticationFilter(
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing subject in JWT")
             return
         }
-        val tenantId = claims["tenant_id"] as? String ?: run {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing tenant_id in JWT")
-            return
+
+        @Suppress("UNCHECKED_CAST")
+        val authorities = (claims["authorities"] as? List<String>)?.map { SimpleGrantedAuthority(it) } ?: emptyList()
+        val isAdmin = authorities.any { it.authority == "ROLE_ADMIN" }
+
+        val authentication = UsernamePasswordAuthenticationToken(username, null, authorities)
+        SecurityContextHolder.getContext().authentication = authentication
+
+        val tenantId = claims["tenant_id"] as? String
+        if (!isAdmin && tenantId != null) {
+            TenantContext.set(tenantId)
         }
 
-        val authentication = UsernamePasswordAuthenticationToken(username, null, emptyList())
-        SecurityContextHolder.getContext().authentication = authentication
-        TenantContext.set(tenantId)
         try {
             filterChain.doFilter(request, response)
         } finally {

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>CLAiM — Admin</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #1a1a2e; }
+        h2 { color: #2a2a4e; margin-top: 32px; border-bottom: 2px solid #e8e8f0; padding-bottom: 8px; }
+        .logout { display: inline-block; margin-bottom: 16px; color: #e74c3c; text-decoration: none; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e0e0e0; font-size: 0.95em; }
+        th { background: #f5f5f5; font-weight: 600; color: #333; }
+        tr:hover { background: #fafafa; }
+        .form-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap; }
+        .form-row label { font-size: 0.85em; color: #555; display: block; margin-bottom: 2px; }
+        .form-row input, .form-row select { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
+        .form-row button { padding: 6px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 600; }
+        .btn-create { background: #27ae60; color: white; }
+        .btn-delete { background: #e74c3c; color: white; }
+        .btn-edit { background: #3498db; color: white; }
+        .btn-save { background: #27ae60; color: white; }
+        .btn-cancel { background: #95a5a6; color: white; }
+        .role-badge, .tenant-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.82em; font-weight: 600; }
+        .role-admin { background: #fdecea; color: #c0392b; }
+        .role-employee { background: #e8f0fe; color: #1967d2; }
+        .tenant-badge { background: #e8f8e8; color: #1e8449; }
+        .empty { color: #999; font-style: italic; padding: 16px 0; }
+        .filter-bar { margin-bottom: 12px; }
+        .filter-bar select, .filter-bar button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
+        .filter-bar button { background: #7f8c8d; color: white; border: none; cursor: pointer; font-weight: 600; }
+        .inline-edit { background: #fffbeb; }
+        .inline-edit td { padding: 4px 8px; }
+        .inline-edit input, .inline-edit select { padding: 4px 6px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85em; width: 100%; box-sizing: border-box; }
+        .actions { white-space: nowrap; }
+        .actions button { margin-right: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
+    <a class="logout" th:href="${logoutUrl}">Log out</a>
+
+    <h2>Tenants</h2>
+    <form class="form-row" method="post" action="/admin/tenants/create">
+        <div>
+            <label>Tenant ID</label>
+            <input type="text" name="tenantId" required placeholder="e.g. clinic_xyz" pattern="[a-z][a-z0-9_]{0,62}" />
+        </div>
+        <div>
+            <label>Name</label>
+            <input type="text" name="name" required placeholder="e.g. Demo Clinic" />
+        </div>
+        <div>
+            <label>&nbsp;</label>
+            <button class="btn-create" type="submit">Create Tenant</button>
+        </div>
+    </form>
+
+    <div th:if="${#lists.isEmpty(tenants)}" class="empty">No tenants found.</div>
+    <table th:unless="${#lists.isEmpty(tenants)}">
+        <thead>
+            <tr>
+                <th>Tenant ID</th>
+                <th>Name</th>
+                <th>Active</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="tenant : ${tenants}">
+                <td th:text="${tenant.tenantId}">clinic_xyz</td>
+                <td th:text="${tenant.name}">Clinic Name</td>
+                <td th:text="${tenant.active ? 'Yes' : 'No'}">Yes</td>
+                <td class="actions">
+                    <form method="post" action="/admin/tenants/delete" style="display:inline" onsubmit="return confirm('Delete tenant ' + this.tenantId.value + '? This drops the schema and all data.')">
+                        <input type="hidden" name="tenantId" th:value="${tenant.tenantId}" />
+                        <button class="btn-delete" type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Users</h2>
+    <form class="form-row" method="post" action="/admin/users/create">
+        <div>
+            <label>Username</label>
+            <input type="text" name="username" required placeholder="e.g. doctor_smith" />
+        </div>
+        <div>
+            <label>Tenant</label>
+            <select name="tenantId">
+                <option value="">None (Admin)</option>
+                <option th:each="t : ${tenants}" th:value="${t.tenantId}" th:text="${t.tenantId}">tenant_a</option>
+            </select>
+        </div>
+        <div>
+            <label>Role</label>
+            <select name="role" required>
+                <option value="CLINIC_EMPLOYEE">CLINIC_EMPLOYEE</option>
+                <option value="ADMIN">ADMIN</option>
+            </select>
+        </div>
+        <div>
+            <label>&nbsp;</label>
+            <button class="btn-create" type="submit">Create User</button>
+        </div>
+    </form>
+
+    <div class="filter-bar">
+        <form method="get" action="/admin" style="display:flex; gap:8px; align-items:center;">
+            <label style="font-size:0.9em;">Filter by tenant:</label>
+            <select name="tenantFilter">
+                <option value="" th:selected="${tenantFilter.isEmpty()}">All</option>
+                <option th:each="t : ${tenants}" th:value="${t.tenantId}" th:selected="${t.tenantId == tenantFilter}" th:text="${t.tenantId}">tenant_a</option>
+            </select>
+            <button type="submit">Filter</button>
+        </form>
+    </div>
+
+    <div th:if="${#lists.isEmpty(users)}" class="empty">No users found.</div>
+    <table th:unless="${#lists.isEmpty(users)}">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Tenant</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="user : ${users}">
+                <td th:text="${user.username}">doctor_smith</td>
+                <td>
+                    <span class="role-badge" th:classappend="${user.role == 'ADMIN' ? 'role-admin' : 'role-employee'}" th:text="${user.role}">CLINIC_EMPLOYEE</span>
+                </td>
+                <td>
+                    <span class="tenant-badge" th:text="${user.tenantId ?: '—'}">tenant_a</span>
+                </td>
+                <td class="actions">
+                    <button class="btn-edit" th:attr="onclick='toggleEdit(' + ${user.id} + ')'">Edit</button>
+                    <form method="post" action="/admin/users/delete" style="display:inline" onsubmit="return confirm('Delete user ' + this.id.value + '?')">
+                        <input type="hidden" name="id" th:value="${user.id}" />
+                        <button class="btn-delete" type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        function toggleEdit(userId) {
+            const existing = document.getElementById('edit-row-' + userId);
+            if (existing) {
+                existing.remove();
+                return;
+            }
+
+            const row = document.querySelector('tr:has(button[onclick="toggleEdit(' + userId + ')"])');
+            row.insertAdjacentHTML('afterend',
+                '<tr id="edit-row-' + userId + '" class="inline-edit">' + row.querySelector('.btn-edit').parentElement.parentElement.parentElement.innerHTML.replace(/<td>(?!<\/td>)/g, '<td>') + '</tr>'
+            );
+        }
+    </script>
+</body>
+</html>

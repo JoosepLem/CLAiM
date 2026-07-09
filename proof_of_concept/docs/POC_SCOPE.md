@@ -380,3 +380,136 @@ Error handling is rudimental for the POC: invalid/corrupt PDFs return an error m
 - **Test data:** Generated separately (synthetic). Exact PDF parsers built later.
 - **Security scope:** POC-level — HTTPS, JWT, column-level encryption, HMAC searchable hashes, append-only audit log with hash chain
 - **Production readiness:** Not required for POC. Demonstrates technical feasibility of the chosen patterns.
+
+---
+
+### 19. Admin UI & RBAC (Add-On)
+
+**Purpose:**
+
+Close the loop on tenant management by adding a minimal admin dashboard with role-based access control. This enables the POC to test the full tenant lifecycle — provisioning, user assignment, and decommissioning — through a UI rather than SQL or app restarts.
+
+### POC Success Criterion
+
+- **Tenant lifecycle management** — Can a tenant be created and deleted through the admin UI, with schema provisioning and migration happening synchronously and correctly?
+
+---
+
+#### 19.1 User Roles
+
+**Decision:** Add a `role` column to the `public.users` table.
+
+- `ADMIN` — Manages tenants and users. Has no tenant affiliation (`tenant_id = NULL`). Bypasses tenant-scoped data access (no `search_path` set).
+- `CLINIC_EMPLOYEE` — Existing tenant-scoped user. Access limited to their tenant's schema via `search_path`.
+
+**Migration:** A new shared migration (`V3__add_role.sql`) adds `role TEXT NOT NULL DEFAULT 'CLINIC_EMPLOYEE'` to `public.users`.
+
+---
+
+#### 19.2 JWT Claims
+
+**Decision:** Use the standard `authorities` claim as a string array.
+
+- Admin JWT: `"authorities": ["ROLE_ADMIN"]`
+- Clinic employee JWT: `"authorities": ["ROLE_CLINIC_EMPLOYEE"]`
+
+No `tenant_id` claim for admin users (or set to JSON `null`). The `JwtAuthenticationFilter` uses the `authorities` claim to populate Spring Security `GrantedAuthority` objects.
+
+---
+
+#### 19.3 Authentication Flow
+
+**Decision:** Single login page serves both roles.
+
+- Login validates username against `public.users`, reads `role` and `tenant_id`
+- JWT is issued with `authorities` claim
+- Post-login redirect: admins → `/admin`, clinic employees → `/dashboard`
+- `@PreAuthorize("hasRole('ADMIN')")` guards all `/admin/**` endpoints
+
+**TenantContext bypass:** When `role = ADMIN`, the `JwtAuthenticationFilter` does not set a `TenantContext`. Admin queries operate on the `public` schema only.
+
+---
+
+#### 19.4 First Admin Bootstrap
+
+**Decision:** Flyway migration inserts a default admin user.
+
+The `V3__add_role.sql` migration also inserts:
+```sql
+INSERT INTO public.users (username, tenant_id, role)
+VALUES ('admin', NULL, 'ADMIN');
+```
+
+This ensures an admin is available immediately at startup. Works identically in dev, docker, staging, and production profiles.
+
+---
+
+#### 19.5 Admin UI — Layout
+
+**Decision:** A single Thymeleaf page at `/admin` with two sections.
+
+- **Tenant section:** Table listing all tenants (tenant ID, name, active status). Inline form to create a new tenant (tenant ID + name). Delete button per row.
+- **User section:** Table listing all users (username, role, tenant). Filterable by tenant. Inline form to create a new user (username, tenant dropdown, role dropdown). Edit and delete buttons per row.
+
+Minimal styling — same approach as the existing login and dashboard pages. No CSS framework.
+
+---
+
+#### 19.6 Tenant CRUD
+
+**Decision:** Create and delete only. No editing (tenant ID is immutable — it is the schema name). Read is the tenant table on `/admin`.
+
+**Create flow (synchronous):**
+1. Validate tenant ID format (`[a-z][a-z0-9_]{0,62}`)
+2. INSERT into `public.tenants`
+3. `CREATE SCHEMA IF NOT EXISTS tenant_{id}`
+4. Run tenant migrations on the new schema via `TenantMigrationService.migrateTenant(schema)`
+5. All steps run inline during the HTTP request
+
+**Delete flow (synchronous, hard delete):**
+1. `DROP SCHEMA IF EXISTS tenant_{id} CASCADE`
+2. DELETE from `public.users` WHERE `tenant_id = ?`
+3. DELETE from `public.tenants` WHERE `tenant_id = ?`
+
+No soft delete, no confirmation beyond the delete button. Page refreshes and the tenant is gone.
+
+---
+
+#### 19.7 User CRUD
+
+**Decision:** Full create, read, update, and delete for users.
+
+- **Create:** Username, tenant assignment (dropdown of active tenants), role (ADMIN or CLINIC_EMPLOYEE via dropdown). No password — username-only auth consistent with existing POC auth.
+- **Read:** User table on `/admin`, filterable by tenant via a dropdown. All users visible (across all tenants and admin users).
+- **Update:** Change username, tenant assignment, or role.
+- **Delete:** Remove the user row. No cascade concerns — users own no data.
+
+---
+
+#### 19.8 Service Layer
+
+**Decision:** Thin REST service layer behind Thymeleaf controllers.
+
+- `AdminTenantService` — Tenant create/delete logic, delegates to `TenantMigrationService` for schema + migration concerns and `TenantRepository` for row operations.
+- `AdminUserService` — User CRUD against `public.users` via a `UserRepository`.
+
+Controllers (`AdminController`) handle form submissions with POST/Redirect/GET and delegate to services. No `@RestController` JSON endpoints for the POC, but services are structured so REST endpoints can be added later without logic changes.
+
+---
+
+#### 19.9 DataSource for Admin Operations
+
+Admin endpoints that perform DDL (schema creation, schema drop) write through the migration datasource (`app_migrator`). The runtime datasource (`app_user`) cannot create or drop schemas. `TenantMigrationService` already uses the migration datasource via programmatic Flyway — admin flows reuse this.
+
+---
+
+#### 19.10 Error Handling
+
+**Decision:** Out of scope for the POC. Unhandled exceptions (duplicate tenant ID, invalid schema name, DB errors) result in HTTP 500 responses. No flash messages, inline validation, or custom error pages.
+
+---
+
+#### 19.11 Changes to Existing Requirements
+
+- **Requirement 1 (Multi-Tenant Routing):** `JwtAuthenticationFilter` conditionally skips setting `TenantContext` when the user's role is `ADMIN`.
+- **Requirement 12 (Authentication):** `AuthController` inspects the user's role after successful authentication and redirects accordingly (`/admin` for `ADMIN`, `/dashboard` for `CLINIC_EMPLOYEE`).
