@@ -1,6 +1,13 @@
 spring:
-  flyway:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:claim}
+  datasource:
+    hikari:
+      jdbc-url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:claim}
+
+app:
+  datasource:
+    migration:
+      jdbc-url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:claim}
+
 jwt:
   secret: ${JWT_SECRET}
   expiration-hours: ${JWT_EXPIRATION_HOURS:8}

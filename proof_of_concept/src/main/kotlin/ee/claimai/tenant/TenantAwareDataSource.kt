@@ -12,7 +12,7 @@ import javax.sql.DataSource
 class TenantSchemaBeanPostProcessor : BeanPostProcessor {
 
     override fun postProcessAfterInitialization(bean: Any, beanName: String): Any {
-        if (bean is DataSource && beanName == "dataSource") {
+        if (bean is DataSource && beanName != "migrationDataSource") {
             return TenantAwareDataSource(bean)
         }
         return bean

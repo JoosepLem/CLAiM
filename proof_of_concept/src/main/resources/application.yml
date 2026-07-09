@@ -2,15 +2,21 @@ spring:
   profiles:
     active: dev
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:claim}
-    username: ${DB_USER:claim}
-    password: ${DB_PASSWORD:claim}
+    hikari:
+      jdbc-url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:claim}
+      username: ${DB_USER:app_user}
+      password: ${DB_PASSWORD:claim}
   flyway:
-    enabled: true
-    schemas: public
-    url: ${FLYWAY_URL:jdbc:postgresql://localhost:5432/claim}
-    user: ${FLYWAY_USER:claim}
-    password: ${FLYWAY_PASSWORD:claim}
+    enabled: false
+
+app:
+  datasource:
+    migration:
+      jdbc-url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:claim}
+      username: ${MIGRATION_DB_USER:app_migrator}
+      password: ${MIGRATION_DB_PASSWORD:claim}
+      maximum-pool-size: 2
+
 management:
   endpoints:
     web:

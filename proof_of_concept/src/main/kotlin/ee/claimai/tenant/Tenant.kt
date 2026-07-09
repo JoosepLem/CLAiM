@@ -7,5 +7,6 @@ import org.springframework.data.relational.core.mapping.Table
 data class Tenant(
     @Id val id: Long = 0,
     val tenantId: String,
-    val name: String
+    val name: String,
+    val active: Boolean = true
 )

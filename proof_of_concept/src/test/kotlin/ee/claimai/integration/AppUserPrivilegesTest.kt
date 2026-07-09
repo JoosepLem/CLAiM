@@ -11,7 +11,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.dao.DataAccessException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.datasource.DriverManagerDataSource
-import java.util.UUID
 import javax.sql.DataSource
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -45,10 +44,9 @@ class AppUserPrivilegesTest : PostgresTestBase() {
 
     @Test
     fun `app_user can read from tenant tables`() {
-        val invoiceId = UUID.randomUUID()
-        jdbcTemplate.update(
-            "INSERT INTO tenant_a.treatment_invoices (id, invoice_number, source_filename) VALUES (?, ?, ?)",
-            invoiceId, "TEST-INV", "test.csv"
+        val invoiceId = jdbcTemplate.queryForObject(
+            "INSERT INTO tenant_a.treatment_invoices (invoice_number, source_filename) VALUES (?, ?) RETURNING id",
+            Long::class.java, "TEST-INV", "test.csv"
         )
 
         val rows = restrictedTemplate.queryForList(

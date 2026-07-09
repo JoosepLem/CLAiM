@@ -1,6 +1,5 @@
 package ee.claimai.support
 
-import org.junit.jupiter.api.BeforeAll
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
@@ -22,12 +21,12 @@ abstract class PostgresTestBase {
         @JvmStatic
         @DynamicPropertySource
         fun configureProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url") { postgres.jdbcUrl }
-            registry.add("spring.datasource.username") { postgres.username }
-            registry.add("spring.datasource.password") { postgres.password }
-            registry.add("spring.flyway.url") { postgres.jdbcUrl }
-            registry.add("spring.flyway.enabled") { "true" }
-            registry.add("spring.flyway.schemas") { "public" }
+            registry.add("spring.datasource.hikari.jdbc-url") { postgres.jdbcUrl }
+            registry.add("spring.datasource.hikari.username") { postgres.username }
+            registry.add("spring.datasource.hikari.password") { postgres.password }
+            registry.add("app.datasource.migration.jdbc-url") { postgres.jdbcUrl }
+            registry.add("app.datasource.migration.username") { postgres.username }
+            registry.add("app.datasource.migration.password") { postgres.password }
         }
     }
 }

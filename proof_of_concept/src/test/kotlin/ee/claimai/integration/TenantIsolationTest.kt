@@ -16,7 +16,6 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
-import java.util.UUID
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class TenantIsolationTest : PostgresTestBase() {
@@ -40,24 +39,22 @@ class TenantIsolationTest : PostgresTestBase() {
         jdbcTemplate.update("DELETE FROM tenant_b.partner_invoice_lines")
         jdbcTemplate.update("DELETE FROM tenant_b.partner_invoices")
 
-        val tenantAInvoiceId = UUID.randomUUID()
+        val taInvId = jdbcTemplate.queryForObject(
+            "INSERT INTO tenant_a.treatment_invoices (invoice_number, source_filename) VALUES (?, ?) RETURNING id",
+            Long::class.java, "TA-INV-001", "ta_file.pdf"
+        )!!
         jdbcTemplate.update(
-            "INSERT INTO tenant_a.treatment_invoices (id, invoice_number, source_filename) VALUES (?, ?, ?)",
-            tenantAInvoiceId, "TA-INV-001", "ta_file.pdf"
-        )
-        jdbcTemplate.update(
-            "INSERT INTO tenant_a.treatment_invoice_lines (id, invoice_id, isikukood, isikukood_hash, procedure_code, amount, treatment_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            UUID.randomUUID(), tenantAInvoiceId, byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6), "PROC-A", 100.00, java.sql.Date.valueOf("2025-01-15")
+            "INSERT INTO tenant_a.treatment_invoice_lines (invoice_id, isikukood, isikukood_hash, procedure_code, amount, treatment_date) VALUES (?, ?, ?, ?, ?, ?)",
+            taInvId, byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6), "PROC-A", java.math.BigDecimal("100.00"), java.sql.Date.valueOf("2025-01-15")
         )
 
-        val tenantBInvoiceId = UUID.randomUUID()
+        val tbInvId = jdbcTemplate.queryForObject(
+            "INSERT INTO tenant_b.treatment_invoices (invoice_number, source_filename) VALUES (?, ?) RETURNING id",
+            Long::class.java, "TB-INV-001", "tb_file.pdf"
+        )!!
         jdbcTemplate.update(
-            "INSERT INTO tenant_b.treatment_invoices (id, invoice_number, source_filename) VALUES (?, ?, ?)",
-            tenantBInvoiceId, "TB-INV-001", "tb_file.pdf"
-        )
-        jdbcTemplate.update(
-            "INSERT INTO tenant_b.treatment_invoice_lines (id, invoice_id, isikukood, isikukood_hash, procedure_code, amount, treatment_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            UUID.randomUUID(), tenantBInvoiceId, byteArrayOf(7, 8, 9), byteArrayOf(10, 11, 12), "PROC-B", 200.00, java.sql.Date.valueOf("2025-02-20")
+            "INSERT INTO tenant_b.treatment_invoice_lines (invoice_id, isikukood, isikukood_hash, procedure_code, amount, treatment_date) VALUES (?, ?, ?, ?, ?, ?)",
+            tbInvId, byteArrayOf(7, 8, 9), byteArrayOf(10, 11, 12), "PROC-B", java.math.BigDecimal("200.00"), java.sql.Date.valueOf("2025-02-20")
         )
     }
 
