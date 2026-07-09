@@ -4,7 +4,14 @@ jwt:
 app:
   security:
     secure-cookie: false
+  encryption:
+    local:
+      kek-hex: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
   datasource:
     migration:
       username: ${FLYWAY_USER:claim}
       password: ${FLYWAY_PASSWORD:claim}
+
+test:
+  tenant:
+    suffix: demo

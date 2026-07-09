@@ -35,6 +35,8 @@ resource "aws_ecs_task_definition" "app" {
         { name = "DB_NAME", value = var.rds_db_name },
         { name = "DB_PORT", value = "5432" },
         { name = "SPRING_PROFILES_ACTIVE", value = var.environment },
+        { name = "KMS_KEY_ID", value = aws_kms_alias.encryption.name },
+        { name = "KMS_REGION", value = var.aws_region },
       ]
       secrets = [
         { name = "DB_USER", valueFrom = "${aws_secretsmanager_secret.app.arn}:DB_USER::" },

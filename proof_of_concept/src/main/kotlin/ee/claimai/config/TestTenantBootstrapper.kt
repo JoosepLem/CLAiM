@@ -34,6 +34,11 @@ class TestTenantBootstrapper(
             tenantId, "Test $tenantId", true
         )
 
+        jdbcTemplate.update(
+            "INSERT INTO users (username, tenant_id, role) VALUES (?, ?, ?) ON CONFLICT (username) DO NOTHING",
+            "demo", tenantId, "CLINIC_EMPLOYEE"
+        )
+
         migrations.migrateTenant(tenantId)
     }
 }

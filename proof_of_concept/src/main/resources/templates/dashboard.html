@@ -13,12 +13,29 @@
         tr:hover { background: #fafafa; }
         .empty { color: #999; font-style: italic; padding: 20px 0; }
         .tenant-label { background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; }
+        .benchmark { margin-bottom: 24px; padding: 16px; background: #fffbe6; border: 1px solid #f0e68c; border-radius: 8px; }
+        .benchmark form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .benchmark input[type=number] { width: 80px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .benchmark button { padding: 6px 16px; background: #1967d2; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .benchmark button:hover { background: #1557b0; }
+        .benchmark label { font-size: 14px; color: #555; }
+        .invoice-link { color: #1967d2; text-decoration: none; font-weight: 600; }
+        .invoice-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <h1>CLAiM Dashboard</h1>
     <p class="clinic">Welcome, <strong th:text="${username}">user</strong> — <span class="tenant-label" th:text="${clinicName}">Clinic</span></p>
     <a class="logout" th:href="${logoutUrl}">Log out</a>
+
+    <div class="benchmark">
+        <form method="post" action="/dashboard/seed">
+            <label for="lines">Generate benchmark invoice with</label>
+            <input type="number" id="lines" name="lines" value="1000" min="1" max="10000">
+            <label for="lines">lines</label>
+            <button type="submit">Generate</button>
+        </form>
+    </div>
 
     <h2>Treatment Invoices</h2>
     <div th:if="${#lists.isEmpty(invoices)}" class="empty">No invoices found for this tenant.</div>
@@ -27,13 +44,15 @@
             <tr>
                 <th>Invoice #</th>
                 <th>Source</th>
+                <th>Lines</th>
                 <th>Uploaded</th>
             </tr>
         </thead>
         <tbody>
             <tr th:each="invoice : ${invoices}">
-                <td th:text="${invoice.invoiceNumber ?: '—'}">INV-001</td>
+                <td><a class="invoice-link" th:href="@{/dashboard/invoice/{id}(id=${invoice.id})}" th:text="${invoice.invoiceNumber ?: '—'}">INV-001</a></td>
                 <td th:text="${invoice.sourceFilename ?: '—'}">file.pdf</td>
+                <td th:text="${#lists.size(invoice.lines)}">0</td>
                 <td th:text="${#temporals.format(invoice.uploadedAt, 'yyyy-MM-dd HH:mm')}">2025-01-15 10:30</td>
             </tr>
         </tbody>

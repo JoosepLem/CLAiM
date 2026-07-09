@@ -9,6 +9,10 @@ app:
       jdbc-url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:claim}
   security:
     secure-cookie: true
+  encryption:
+    kms:
+      key-id: ${KMS_KEY_ID}
+      region: ${KMS_REGION:eu-north-1}
 
 jwt:
   secret: ${JWT_SECRET}

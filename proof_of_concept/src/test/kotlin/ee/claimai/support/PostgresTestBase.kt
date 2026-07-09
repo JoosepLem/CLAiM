@@ -7,6 +7,7 @@ import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import java.sql.DriverManager
 
 @Testcontainers
 abstract class PostgresTestBase {
@@ -35,7 +36,17 @@ abstract class PostgresTestBase {
             .withCommand("postgres", "-c", "fsync=off", "-c", "synchronous_commit=off",
                 "-c", "full_page_writes=off", "-c", "max_connections=50")
             .withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
-            .apply { start() }
+            .apply {
+                start()
+                try {
+                    DriverManager.getConnection(jdbcUrl, username, password).use { conn ->
+                        conn.createStatement().use { stmt ->
+                            stmt.execute("CREATE ROLE app_user WITH LOGIN PASSWORD 'restricted_pass'")
+                            stmt.execute("CREATE ROLE app_migrator WITH LOGIN PASSWORD 'restricted_pass'")
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
 
         @JvmStatic
         @DynamicPropertySource

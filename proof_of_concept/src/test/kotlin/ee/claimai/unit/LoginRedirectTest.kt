@@ -2,7 +2,7 @@ package ee.claimai.unit
 
 import ee.claimai.auth.AuthController
 import ee.claimai.config.AppSecurityProperties
-import ee.claimai.invoice.TreatmentInvoiceRepository
+import ee.claimai.invoice.InvoiceService
 import ee.claimai.security.JwtService
 import ee.claimai.tenant.TenantRepository
 import ee.claimai.user.User
@@ -25,8 +25,8 @@ class LoginRedirectTest {
 
     private val userRepository: UserRepository = mockk()
     private val jwtService: JwtService = mockk()
-    private val treatmentInvoiceRepository: TreatmentInvoiceRepository = mockk()
     private val tenantRepository: TenantRepository = mockk()
+    private val invoiceService: InvoiceService = mockk()
 
     private val dummyView = object : View {
         override fun render(model: MutableMap<String, *>?, request: jakarta.servlet.http.HttpServletRequest, response: jakarta.servlet.http.HttpServletResponse) {
@@ -44,7 +44,7 @@ class LoginRedirectTest {
     }
 
     private val mockMvc = MockMvcBuilders
-        .standaloneSetup(AuthController(userRepository, jwtService, AppSecurityProperties(secureCookie = false), treatmentInvoiceRepository, tenantRepository))
+        .standaloneSetup(AuthController(userRepository, jwtService, AppSecurityProperties(secureCookie = false), tenantRepository, invoiceService))
         .setViewResolvers(viewResolver)
         .build()
 

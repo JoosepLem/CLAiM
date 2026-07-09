@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Invoice Detail — CLAiM</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #1a1a2e; }
+        .back { display: inline-block; margin-bottom: 16px; color: #1967d2; text-decoration: none; }
+        .meta { margin-bottom: 24px; color: #555; }
+        .meta strong { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f5f5f5; font-weight: 600; }
+        tr:hover { background: #fafafa; }
+        .cipher { font-family: monospace; font-size: 0.75em; color: #999; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <a class="back" href="/dashboard">&larr; Back to Dashboard</a>
+    <h1 th:text="'Invoice ' + ${invoice.invoiceNumber}">Invoice</h1>
+    <div class="meta">
+        <p>Type: <strong th:text="${invoice.type}">TREATMENT</strong></p>
+        <p>Source: <strong th:text="${invoice.sourceFilename ?: '—'}">file.json</strong></p>
+        <p>Uploaded: <strong th:text="${#temporals.format(invoice.uploadedAt, 'yyyy-MM-dd HH:mm')}">2025-01-15 10:30</strong></p>
+        <p>Lines: <strong th:text="${#lists.size(invoice.lines)}">0</strong></p>
+    </div>
+
+    <h2>Line Items</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Isikukood (decrypted)</th>
+                <th>Procedure Code</th>
+                <th>Amount</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="line, iter : ${invoice.lines}">
+                <td th:text="${iter.index + 1}">1</td>
+                <td th:text="${line.isikukood}">47101010033</td>
+                <td th:text="${line.procedureCode}">PROC-001</td>
+                <td th:text="${line.amount}">100.00</td>
+                <td th:text="${line.date}">2025-01-15</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

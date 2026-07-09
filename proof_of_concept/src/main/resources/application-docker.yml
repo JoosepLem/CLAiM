@@ -9,6 +9,9 @@ app:
       jdbc-url: jdbc:postgresql://postgres:5432/claim
       username: ${FLYWAY_USER:claim}
       password: ${FLYWAY_PASSWORD:claim}
+  encryption:
+    local:
+      kek-hex: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
   security:
     secure-cookie: false
 
