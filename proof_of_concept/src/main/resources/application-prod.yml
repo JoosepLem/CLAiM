@@ -7,10 +7,9 @@ app:
   datasource:
     migration:
       jdbc-url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:claim}
+  security:
+    secure-cookie: true
 
 jwt:
   secret: ${JWT_SECRET}
   expiration-hours: ${JWT_EXPIRATION_HOURS:8}
-app:
-  security:
-    secure-cookie: true

@@ -9,10 +9,9 @@ app:
       jdbc-url: jdbc:postgresql://postgres:5432/claim
       username: ${MIGRATION_DB_USER:claim}
       password: ${MIGRATION_DB_PASSWORD:claim}
+  security:
+    secure-cookie: false
 
 jwt:
   secret: ${JWT_SECRET:poc-secret-key-change-me-to-a-very-long-value-at-least-32-bytes}
   expiration-hours: 8
-app:
-  security:
-    secure-cookie: false
