@@ -1,7 +1,6 @@
 package ee.claimai.invoice
 
 import ee.claimai.encryption.EncryptionService
-import ee.claimai.invoice.dto.InvoiceLineRequest
 import ee.claimai.invoice.dto.InvoiceLineResponse
 import ee.claimai.invoice.dto.InvoiceResponse
 import ee.claimai.invoice.dto.InvoiceType
@@ -38,8 +37,8 @@ class InvoiceService(
                 )
                 val saved = treatmentInvoiceRepo.save(invoice)
 
-                val lineResponses = encrypted.mapIndexed { i, (lineReq, ct, hmac) ->
-                    val line = TreatmentInvoiceLine(
+                val lines = encrypted.map { (lineReq, ct, hmac) ->
+                    TreatmentInvoiceLine(
                         invoiceId = saved.id,
                         isikukood = ct,
                         isikukoodHash = hmac,
@@ -48,8 +47,10 @@ class InvoiceService(
                         treatmentDate = lineReq.date,
                         keyVersion = 1
                     )
-                    val lineId = treatmentInvoiceLineRepo.insert(line)
-                    InvoiceLineResponse(lineId, lineReq.isikukood, lineReq.procedureCode, lineReq.amount, lineReq.date)
+                }
+                val ids = treatmentInvoiceLineRepo.insertBatch(lines)
+                val lineResponses = ids.zip(encrypted).map { (id, pair) ->
+                    InvoiceLineResponse(id, pair.first.isikukood, pair.first.procedureCode, pair.first.amount, pair.first.date)
                 }
 
                 InvoiceResponse(
@@ -73,8 +74,8 @@ class InvoiceService(
                 )
                 val invoiceId = partnerInvoiceRepo.insert(invoice)
 
-                val lineResponses = encrypted.mapIndexed { i, (lineReq, ct, hmac) ->
-                    val line = PartnerInvoiceLine(
+                val lines = encrypted.map { (lineReq, ct, hmac) ->
+                    PartnerInvoiceLine(
                         invoiceId = invoiceId,
                         isikukood = ct,
                         isikukoodHash = hmac,
@@ -83,8 +84,10 @@ class InvoiceService(
                         serviceDate = lineReq.date,
                         keyVersion = 1
                     )
-                    val lineId = partnerInvoiceRepo.insertLine(line)
-                    InvoiceLineResponse(lineId, lineReq.isikukood, lineReq.procedureCode, lineReq.amount, lineReq.date)
+                }
+                val ids = partnerInvoiceRepo.insertLineBatch(lines)
+                val lineResponses = ids.zip(encrypted).map { (id, pair) ->
+                    InvoiceLineResponse(id, pair.first.isikukood, pair.first.procedureCode, pair.first.amount, pair.first.date)
                 }
 
                 val saved = partnerInvoiceRepo.findById(invoiceId)!!

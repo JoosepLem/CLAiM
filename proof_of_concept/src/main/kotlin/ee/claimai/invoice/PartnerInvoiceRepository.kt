@@ -26,6 +26,19 @@ class PartnerInvoiceRepository(private val jdbcTemplate: JdbcTemplate) {
         ) ?: throw IllegalStateException("Failed to insert partner invoice line")
     }
 
+    fun insertLineBatch(lines: List<PartnerInvoiceLine>): List<Long> {
+        if (lines.isEmpty()) return emptyList()
+        val sql = StringBuilder("INSERT INTO partner_invoice_lines (invoice_id, isikukood, isikukood_hash, procedure_code, amount, service_date, key_version) VALUES ")
+        val params = mutableListOf<Any>()
+        lines.forEachIndexed { i, line ->
+            if (i > 0) sql.append(", ")
+            sql.append("(?, ?, ?, ?, ?, ?, ?)")
+            params.addAll(listOf(line.invoiceId, line.isikukood, line.isikukoodHash, line.procedureCode, line.amount, line.serviceDate, line.keyVersion))
+        }
+        sql.append(" RETURNING id")
+        return jdbcTemplate.queryForList(sql.toString(), Long::class.java, *params.toTypedArray()).mapNotNull { it }
+    }
+
     fun findAllOrderByUploadedAtDesc(): List<PartnerInvoice> {
         return jdbcTemplate.query(
             "SELECT id, invoice_number, provider_name, uploaded_at, source_filename FROM partner_invoices ORDER BY uploaded_at DESC",
