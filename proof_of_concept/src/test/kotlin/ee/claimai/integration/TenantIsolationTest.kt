@@ -1,9 +1,11 @@
 package ee.claimai.integration
 
+import ee.claimai.encryption.EncryptionService
 import ee.claimai.support.PostgresTestBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.HttpEntity
@@ -25,6 +27,9 @@ class TenantIsolationTest : PostgresTestBase() {
     @LocalServerPort
     private var port: Int = 0
     private val restTemplate = RestTemplate()
+
+    @Autowired
+    private lateinit var encryptionService: EncryptionService
 
     companion object {
         private val suffix = "t" + UUID.randomUUID().toString().replace("-", "").take(11)
@@ -50,7 +55,8 @@ class TenantIsolationTest : PostgresTestBase() {
         }
     }
 
-    private fun seedInvoiceData(schema: String, invoiceNo: String, procCode: String) {
+    private fun seedInvoiceData(tenantId: String, schema: String, invoiceNo: String, procCode: String) {
+        val encrypted = encryptionService.encrypt(tenantId, "47101010033")
         jdbcTemplate.update("DELETE FROM $schema.treatment_invoice_lines")
         jdbcTemplate.update("DELETE FROM $schema.treatment_invoices")
         val invId = jdbcTemplate.queryForObject(
@@ -58,8 +64,8 @@ class TenantIsolationTest : PostgresTestBase() {
             Long::class.java, invoiceNo, "$schema-file.pdf"
         )!!
         jdbcTemplate.update(
-            "INSERT INTO $schema.treatment_invoice_lines (invoice_id, isikukood, isikukood_hash, procedure_code, amount, treatment_date) VALUES (?,?,?,?,?,?)",
-            invId, byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6), procCode, java.math.BigDecimal("100.00"), java.sql.Date.valueOf("2025-01-15")
+            "INSERT INTO $schema.treatment_invoice_lines (invoice_id, isikukood, isikukood_hash, procedure_code, amount, treatment_date, key_version) VALUES (?,?,?,?,?,?,?)",
+            invId, encrypted.ciphertext, encrypted.hmac, procCode, java.math.BigDecimal("100.00"), java.sql.Date.valueOf("2025-01-15"), 1
         )
     }
 
@@ -103,8 +109,8 @@ class TenantIsolationTest : PostgresTestBase() {
 
     @Test
     fun `user_a sees only tenant_a invoices`() {
-        seedInvoiceData(suffix, "ISOL-A-INV-001", "PROC-A")
-        seedInvoiceData(tenantBId, "ISOL-B-INV-001", "PROC-B")
+        seedInvoiceData(suffix, suffix, "ISOL-A-INV-001", "PROC-A")
+        seedInvoiceData(tenantBId, tenantBId, "ISOL-B-INV-001", "PROC-B")
         val jwt = loginAs(userA)
         val response = restTemplate.exchange("http://localhost:$port/api/invoices", HttpMethod.GET, HttpEntity<Any>(HttpHeaders().apply { add("Cookie", "jwt=$jwt") }), String::class.java)
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
@@ -114,8 +120,8 @@ class TenantIsolationTest : PostgresTestBase() {
 
     @Test
     fun `user_b sees only tenant_b invoices`() {
-        seedInvoiceData(suffix, "ISOL-A-INV-002", "PROC-C")
-        seedInvoiceData(tenantBId, "ISOL-B-INV-002", "PROC-D")
+        seedInvoiceData(suffix, suffix, "ISOL-A-INV-002", "PROC-C")
+        seedInvoiceData(tenantBId, tenantBId, "ISOL-B-INV-002", "PROC-D")
         val jwt = loginAs(userB)
         val response = restTemplate.exchange("http://localhost:$port/api/invoices", HttpMethod.GET, HttpEntity<Any>(HttpHeaders().apply { add("Cookie", "jwt=$jwt") }), String::class.java)
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)

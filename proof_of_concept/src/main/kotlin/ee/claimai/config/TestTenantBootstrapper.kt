@@ -26,8 +26,8 @@ class TestTenantBootstrapper(
         val tenantId = suffix
 
         val migJdbc = JdbcTemplate(migrationDataSource)
-        try { migJdbc.execute("DROP ROLE IF EXISTS app_user") } catch (_: Exception) {}
         try { migJdbc.execute("CREATE ROLE app_user WITH LOGIN PASSWORD 'restricted_pass'") } catch (_: Exception) {}
+        try { migJdbc.execute("CREATE ROLE app_migrator WITH LOGIN PASSWORD 'restricted_pass'") } catch (_: Exception) {}
 
         jdbcTemplate.update(
             "INSERT INTO tenants (tenant_id, name, active) VALUES (?, ?, ?) ON CONFLICT (tenant_id) DO NOTHING",

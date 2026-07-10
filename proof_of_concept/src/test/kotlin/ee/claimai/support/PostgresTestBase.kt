@@ -36,21 +36,11 @@ abstract class PostgresTestBase {
             .withCommand("postgres", "-c", "fsync=off", "-c", "synchronous_commit=off",
                 "-c", "full_page_writes=off", "-c", "max_connections=50")
             .withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
-            .apply {
-                start()
-                try {
-                    DriverManager.getConnection(jdbcUrl, username, password).use { conn ->
-                        conn.createStatement().use { stmt ->
-                            stmt.execute("CREATE ROLE app_user WITH LOGIN PASSWORD 'restricted_pass'")
-                            stmt.execute("CREATE ROLE app_migrator WITH LOGIN PASSWORD 'restricted_pass'")
-                        }
-                    }
-                } catch (_: Exception) {}
-            }
 
         @JvmStatic
         @DynamicPropertySource
         fun configureProperties(registry: DynamicPropertyRegistry) {
+            ensureTestRoles()
             registry.add("spring.datasource.hikari.jdbc-url") { postgres.jdbcUrl }
             registry.add("spring.datasource.hikari.username") { postgres.username }
             registry.add("spring.datasource.hikari.password") { postgres.password }
@@ -59,6 +49,20 @@ abstract class PostgresTestBase {
             registry.add("app.datasource.migration.username") { postgres.username }
             registry.add("app.datasource.migration.password") { postgres.password }
             registry.add("app.datasource.migration.maximum-pool-size") { 2 }
+        }
+
+        @JvmStatic
+        private fun ensureTestRoles() {
+            try {
+                DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { conn ->
+                    conn.createStatement().use { stmt ->
+                        stmt.execute("CREATE ROLE app_user WITH LOGIN PASSWORD 'restricted_pass'")
+                        stmt.execute("CREATE ROLE app_migrator WITH LOGIN PASSWORD 'restricted_pass'")
+                    }
+                }
+            } catch (e: Exception) {
+                // roles may already exist from a previous context in the same container
+            }
         }
     }
 }

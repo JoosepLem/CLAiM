@@ -4,6 +4,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -39,6 +40,12 @@ class GlobalExceptionHandler {
     fun handleAccessDenied(ex: AccessDeniedException, request: WebRequest): ResponseEntity<ProblemDetail> {
         log.warn("Access denied: {}", ex.message, ex)
         return buildError(ex, HttpStatus.FORBIDDEN, "Access denied", request)
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleMalformedJson(ex: HttpMessageNotReadableException, request: WebRequest): ResponseEntity<ProblemDetail> {
+        log.warn("Malformed JSON: {}", ex.message)
+        return buildError(ex, HttpStatus.BAD_REQUEST, "Malformed request body", request)
     }
 
     @ExceptionHandler(Exception::class)
