@@ -8,14 +8,14 @@ import ee.claimai.invoice.dto.InvoiceUploadRequest
 import ee.claimai.tenant.TenantContext
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.math.BigDecimal
 
 @Service
 class InvoiceService(
     private val encryptionService: EncryptionService,
     private val treatmentInvoiceRepo: TreatmentInvoiceRepository,
     private val treatmentInvoiceLineRepo: TreatmentInvoiceLineRepository,
-    private val partnerInvoiceRepo: PartnerInvoiceRepository
+    private val partnerInvoiceRepo: PartnerInvoiceRepository,
+    private val partnerInvoiceLineRepo: PartnerInvoiceLineRepository
 ) {
 
     fun upload(request: InvoiceUploadRequest): InvoiceResponse {
@@ -48,9 +48,9 @@ class InvoiceService(
                         keyVersion = 1
                     )
                 }
-                val ids = treatmentInvoiceLineRepo.insertBatch(lines)
-                val lineResponses = ids.zip(encrypted).map { (id, pair) ->
-                    InvoiceLineResponse(id, pair.first.isikukood, pair.first.procedureCode, pair.first.amount, pair.first.date)
+                val savedLines = treatmentInvoiceLineRepo.saveAll(lines).toList()
+                val lineResponses = savedLines.zip(encrypted).map { (savedLine, pair) ->
+                    InvoiceLineResponse(savedLine.id, pair.first.isikukood, pair.first.procedureCode, pair.first.amount, pair.first.date)
                 }
 
                 InvoiceResponse(
@@ -72,11 +72,11 @@ class InvoiceService(
                     providerName = request.providerName,
                     sourceFilename = request.sourceFilename
                 )
-                val invoiceId = partnerInvoiceRepo.insert(invoice)
+                val saved = partnerInvoiceRepo.save(invoice)
 
                 val lines = encrypted.map { (lineReq, ct, hmac) ->
                     PartnerInvoiceLine(
-                        invoiceId = invoiceId,
+                        invoiceId = saved.id,
                         isikukood = ct,
                         isikukoodHash = hmac,
                         procedureCode = lineReq.procedureCode,
@@ -85,12 +85,11 @@ class InvoiceService(
                         keyVersion = 1
                     )
                 }
-                val ids = partnerInvoiceRepo.insertLineBatch(lines)
-                val lineResponses = ids.zip(encrypted).map { (id, pair) ->
-                    InvoiceLineResponse(id, pair.first.isikukood, pair.first.procedureCode, pair.first.amount, pair.first.date)
+                val savedLines = partnerInvoiceLineRepo.saveAll(lines).toList()
+                val lineResponses = savedLines.zip(encrypted).map { (savedLine, pair) ->
+                    InvoiceLineResponse(savedLine.id, pair.first.isikukood, pair.first.procedureCode, pair.first.amount, pair.first.date)
                 }
 
-                val saved = partnerInvoiceRepo.findById(invoiceId)!!
                 InvoiceResponse(
                     id = saved.id,
                     type = InvoiceType.PARTNER,
@@ -149,8 +148,8 @@ class InvoiceService(
             )
         }
 
-        val partnerInvoices = partnerInvoiceRepo.findAllOrderByUploadedAtDesc().map { inv ->
-            val lines = partnerInvoiceRepo.findLinesByInvoiceId(inv.id)
+        val partnerInvoices = partnerInvoiceRepo.findAllByOrderByUploadedAtDesc().map { inv ->
+            val lines = partnerInvoiceLineRepo.findByInvoiceId(inv.id)
             InvoiceResponse(
                 id = inv.id,
                 type = InvoiceType.PARTNER,
@@ -195,8 +194,8 @@ class InvoiceService(
 
     fun getPartner(id: Long): InvoiceResponse {
         val tenantId = TenantContext.get() ?: throw IllegalStateException("No tenant context")
-        val invoice = partnerInvoiceRepo.findById(id) ?: throw NoSuchElementException("Partner invoice not found: $id")
-        val lines = partnerInvoiceRepo.findLinesByInvoiceId(id)
+        val invoice = partnerInvoiceRepo.findById(id).orElseThrow { NoSuchElementException("Partner invoice not found: $id") }
+        val lines = partnerInvoiceLineRepo.findByInvoiceId(id)
 
         val decryptStart = System.currentTimeMillis()
         val lineResponses = lines.map { decryptLine(tenantId, it) }
